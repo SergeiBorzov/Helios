@@ -2,24 +2,16 @@
 
 #include "renderer.h"
 
-void error_callback(void* userPtr, enum RTCError error, const char* str) {
-    printf("Embree error %d: %s\n", error, str);
-}
-
 namespace Helios {
-    
-    bool Renderer::Init() {
-        m_Device = rtcNewDevice(nullptr);
+    std::vector<Spectrum> Renderer::Draw(const Scene& scene, int width, int height) {
+        std::vector<Spectrum> buffer;
+        buffer.resize(width*height);
 
-        if (m_Device) {
-            rtcSetDeviceErrorFunction(m_Device, error_callback, nullptr);
+        // Render image from each camera of the scene
+        for (const auto& camera: scene.m_Cameras) {
+            camera.GenerateRay(0.0f, 0.0f);
         }
-        return m_Device;
-    }
 
-    Renderer::~Renderer() {
-        if (m_Device) {
-             rtcReleaseDevice(m_Device);
-        }
+        return buffer;
     }
 }

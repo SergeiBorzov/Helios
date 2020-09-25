@@ -1,15 +1,20 @@
 #ifndef HELIOS_RENDERER_H
 #define HELIOS_RENDERER_H
 
+#include <vector>
+
 #include <embree3/rtcore.h>
 
+#include "spectrum.h"
+#include "scene.h"
+
 namespace Helios {
+
     class Renderer {
     public:
-        bool Init();
-        ~Renderer();
+        std::vector<Spectrum> Draw(const Scene& scene, int width, int height);
     private:
-        RTCDevice m_Device = 0;
+
     };
 }
 

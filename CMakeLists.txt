@@ -1,17 +1,24 @@
-cmake_minimum_required(VERSION 2.8.11)
+cmake_minimum_required(VERSION 3.16.3)
 
 project(Helios)
+
 find_package(Embree 3.0 REQUIRED)
-set(CMAKE_CXX_FLAGS "-Wall -g -pedantic")
+find_package (Eigen3 3.3 REQUIRED NO_MODULE)
+find_package(assimp)
+
+# assimp cmake fix https://github.com/ros-planning/geometric_shapes/issues/23
+find_library(
+    assimp_LIBRARIES
+    NAMES assimp
+)
+
+set(CMAKE_CXX_FLAGS "-Wall -Wextra -g -pedantic")
 set(CMAKE_CXX_STANDARD 17)
 
-
 file(GLOB Sources
-   "src/main.cpp"
-   "src/renderer.cpp"
+   "src/*.cpp"
 )
 
 add_executable(Helios ${Sources})
-link_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/third_party/lib)
-target_include_directories(Helios PUBLIC ${EMBREE_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/src/third_party/include)
-target_link_libraries(Helios PRIVATE ${EMBREE_LIBRARY})
+target_include_directories(Helios PUBLIC ${EMBREE_INCLUDE_DIRS} ${ASSIMP_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/src/third_party/include)
+target_link_libraries(Helios PRIVATE ${assimp_LIBRARIES} Eigen3::Eigen ${EMBREE_LIBRARY})
