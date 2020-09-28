@@ -10,14 +10,23 @@ using glm::vec3;
 namespace Helios {
     unsigned int CreateTriangleMesh(const Scene& scene, 
                                     std::vector<float>&& vertices_in,
-                                    std::vector<unsigned int>&& indices_in) {            
+                                    std::vector<unsigned int>&& indices_in) {         
+            for (unsigned int i = 0; i < vertices_in.size(); i += 3) {
+                printf("%f %f %f\n", vertices_in[i], vertices_in[i+1], vertices_in[i+2]);
+            }   
+
+            for (auto& index: indices_in) {
+                printf("%u ", index);
+            }
+            printf("\n");
+
             RTCGeometry geometry = rtcNewGeometry(g_Device, RTC_GEOMETRY_TYPE_TRIANGLE);
             // Create and buffer vertex buffer
-            vec3* vertices = (vec3*)rtcSetNewGeometryBuffer(geometry, 
-                                                               RTC_BUFFER_TYPE_VERTEX, 
-                                                               0, RTC_FORMAT_FLOAT3, 
-                                                               3*sizeof(float), 
-                                                               vertices_in.size() / 3);
+            float* vertices = (float*)rtcSetNewGeometryBuffer(geometry, 
+                                                              RTC_BUFFER_TYPE_VERTEX, 
+                                                              0, RTC_FORMAT_FLOAT3, 
+                                                              3*sizeof(float), 
+                                                              vertices_in.size() / 3);
             memcpy(vertices, vertices_in.data(), vertices_in.size());
 
             

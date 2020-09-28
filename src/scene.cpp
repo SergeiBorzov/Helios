@@ -22,7 +22,9 @@ namespace Helios {
 
     Scene* Scene::LoadFromFile(const char* path_to_file) {
         Assimp::Importer importer;
-        const aiScene *scene_data = importer.ReadFile(path_to_file, aiProcess_Triangulate | aiProcess_FlipUVs);
+        const aiScene *scene_data = importer.ReadFile(path_to_file, 
+                                                      aiProcess_Triangulate | 
+                                                      aiProcess_FlipUVs);
 
         Scene* helios_scene = new Scene();
         helios_scene->Create();
@@ -109,6 +111,11 @@ namespace Helios {
             const auto& mesh = scene_data->mMeshes[i];
             aiNode* mesh_node = root_node->FindNode(mesh->mName);
 
+            if (!mesh_node){
+                printf("%s wasn't found\n", mesh->mName.C_Str());
+                continue;
+            }
+
             // Apply all parent transforms, we need world coordinates
             aiMatrix4x4 local_to_world_ai;
             while (mesh_node != root_node) {
@@ -151,6 +158,8 @@ namespace Helios {
             // Push entity
             helios_scene->PushEntity({CreateTriangleMesh(*helios_scene, std::move(vertices), std::move(indices)), mesh->mMaterialIndex});
         }
+
+        //rtcSetSceneFlags(helios_scene->GetRTCScene(), RTC_SCENE_FLAG_ROBUST);
 
         rtcCommitScene(helios_scene->GetRTCScene());
         return helios_scene;
