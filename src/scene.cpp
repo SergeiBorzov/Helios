@@ -53,21 +53,28 @@ namespace Helios {
             cam_to_world[0] = vec4(cam_to_world_ai.a1, cam_to_world_ai.b1, cam_to_world_ai.c1, cam_to_world_ai.d1);
             cam_to_world[1] = vec4(cam_to_world_ai.a2, cam_to_world_ai.b2, cam_to_world_ai.c2, cam_to_world_ai.d2);
             cam_to_world[2] = vec4(cam_to_world_ai.a3, cam_to_world_ai.b3, cam_to_world_ai.c3, cam_to_world_ai.d3);
-            cam_to_world[3] = vec4(cam_to_world_ai.a4, cam_to_world_ai.b4, cam_to_world_ai.c4, cam_to_world_ai.d4);
+            cam_to_world[3] = vec4(-cam_to_world_ai.a4, -cam_to_world_ai.b4, -cam_to_world_ai.c4, cam_to_world_ai.d4);
 
-            /*
-            printf("View:\n");
+            
+            mat4 view = glm::inverse(cam_to_world);
+            printf("Cam to World:\n");
             printf("%f %f %f %f\n", cam_to_world[0][0], cam_to_world[0][1], cam_to_world[0][2], cam_to_world[0][3]);
             printf("%f %f %f %f\n", cam_to_world[1][0], cam_to_world[1][1], cam_to_world[1][2], cam_to_world[1][3]);
             printf("%f %f %f %f\n", cam_to_world[2][0], cam_to_world[2][1], cam_to_world[2][2], cam_to_world[2][3]);
             printf("%f %f %f %f\n", cam_to_world[3][0], cam_to_world[3][1], cam_to_world[3][2], cam_to_world[3][3]);
-            */
+
+            printf("View:\n");
+            printf("%f %f %f %f\n", view[0][0], view[0][1], view[0][2], view[0][3]);
+            printf("%f %f %f %f\n", view[1][0], view[1][1], view[1][2], view[1][3]);
+            printf("%f %f %f %f\n", view[2][0], view[2][1], view[2][2], view[2][3]);
+            printf("%f %f %f %f\n", view[3][0], view[3][1], view[3][2], view[3][3]);
             
-            PerspectiveCamera helios_cam(camera->mHorizontalFOV, 
+            
+            PerspectiveCamera helios_cam(atan(tan(camera->mHorizontalFOV)/camera->mAspect), 
                                          camera->mAspect, 
                                          camera->mClipPlaneNear, 
                                          camera->mClipPlaneFar);
-            helios_cam.SetView(cam_to_world);
+            helios_cam.SetView(glm::inverse(cam_to_world));
             helios_scene->PushCamera(helios_cam);
         }
 

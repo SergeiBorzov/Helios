@@ -15,10 +15,6 @@ namespace Helios {
     RTCRay Camera::GenerateRay(float u, float v) const {
         vec4 pixel_pos = m_InvProjection*vec4(u, v, 0.0f, 1.0f);
 
-        /*vec3 test = normalize(vec3(m_InvProjection*vec4(0.0f, 0.0f, 0.0f, 1.0f)));
-        vec3 test2 = m_InvView*vec4(test, 0.0f);
-        printf("TEST: %f %f %f\n", test2.x, test2.y, test2.z);*/
-
         vec3 origin = vec3(m_View[3]);
         vec3 direction = normalize(vec3(m_InvView*vec4(pixel_pos.x, pixel_pos.y, pixel_pos.z, 0.0f)));
         
