@@ -1,19 +1,18 @@
 #ifndef HELIOS_MESH_H
 #define HELIOS_MESH_H
 
-#include <assimp/scene.h>
+#include <vector>
+
+#include <glm/glm.hpp>
 #include <embree3/rtcore.h>
+
 
 namespace Helios {
     class Scene;
 
-    class Mesh {
-    public:
-        unsigned int CreateAndAttach(const Scene& scene, const aiMesh* mesh);
-        inline RTCGeometry GetRTCGeometry() const { return m_Geometry; }
-    private:
-        RTCGeometry m_Geometry; // geometry handle
-    };
+    unsigned int CreateTriangleMesh(const Scene& scene, 
+                                    std::vector<float>&& vertices, 
+                                    std::vector<unsigned int>&& indices);
 }
 
 #endif /* End of HELIOS_MESH_H */

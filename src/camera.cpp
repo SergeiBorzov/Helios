@@ -1,33 +1,45 @@
+#include <cstdio>
+#include <limits>
+
+#include <glm/gtc/matrix_transform.hpp>
+
 #include "camera.h"
 
-using Eigen::Matrix4f;
-using Eigen::Vector3f;
-using Eigen::Vector4f;
+using glm::vec3;
+using glm::vec4;
+using glm::mat4;
+using glm::normalize;
 
 namespace Helios {
-    Matrix4f Camera::Perspective(float fov, float aspect, float near, float far) {
-        Matrix4f mat;
 
-        float tan_half = tan(fov*0.5f);
-        float range = far - near;
+    RTCRay Camera::GenerateRay(float u, float v) const {
+        vec4 pixel_pos = m_InvProjection*vec4(u, v, 0.0f, 1.0f);
 
-        mat << 1.0f/(tan_half*aspect), 0.0f, 0.0f, 0.0f,
-               0.0f, 1.0f/tan_half, 0.0f, 0.0f,
-               0.0f, 0.0f, -(near + far)/range, -2.0f*near*far/range,
-               0.0f, 0.0f, -1.0f, 0.0f;
+        /*vec3 test = normalize(vec3(m_InvProjection*vec4(0.0f, 0.0f, 0.0f, 1.0f)));
+        vec3 test2 = m_InvView*vec4(test, 0.0f);
+        printf("TEST: %f %f %f\n", test2.x, test2.y, test2.z);*/
 
-        return mat;
-    }
-
-    Ray Camera::GenerateRay(float u, float v) const {
-        Vector4f pixel_pos = m_InvProjection*Vector4f(u, v, 0.0f, 1.0f);
-        Vector3f dir = Vector3f(pixel_pos.x(), pixel_pos.y(), pixel_pos.z());
+        vec3 origin = vec3(m_View[3]);
+        vec3 direction = normalize(vec3(m_InvView*vec4(pixel_pos.x, pixel_pos.y, pixel_pos.z, 0.0f)));
         
-        Ray ray;
-        ray.origin = m_View.col(3).head<3>();
-        Vector4f dir_world_space = m_InvView*Vector4f(dir.x(), dir.y(), dir.z(), 0.0f);
-        ray.direction = dir_world_space.head<3>();
+
+        RTCRay ray;
+        ray.org_x = origin.x;
+        ray.org_y = origin.y;
+        ray.org_z = origin.z;
+        ray.tnear = 0.0f;
+        ray.dir_x = direction.x;
+        ray.dir_y = direction.y;
+        ray.dir_z = direction.z;
+        ray.tfar = std::numeric_limits<float>::infinity();
+        ray.mask = -1;
+        ray.flags = 0;
         
         return ray;
     }
+
+    PerspectiveCamera::PerspectiveCamera(float fov, float aspect, float near, float far):
+        Camera(glm::perspective(fov, aspect, near, far))
+    {}
+
 }

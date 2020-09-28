@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <string>
 
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image_write.h"
 
 #include "globals.h"
 #include "scene.h"
@@ -59,7 +61,7 @@ void error_callback(void*, enum RTCError error, const char* str) {
     printf("Embree error %d: %s\n", error, str);
 }
 
-static void run(const char* input, const char*) {
+static void run(const char* input, const char* output) {
     g_Device = rtcNewDevice(nullptr);
 
     if (!g_Device) {
@@ -77,7 +79,21 @@ static void run(const char* input, const char*) {
 
     Helios::Renderer renderer;
 
-    renderer.Draw(*scene, 1920, 1080);
+    int width = 1920;
+    int height = 1080;
+    std::vector<Helios::Spectrum> buffer_float;
+    renderer.Draw(buffer_float, *scene, width, height);
+
+    std::vector<uint8_t> buffer_bytes;
+    buffer_bytes.resize(3*buffer_float.size());
+
+    for (unsigned int i = 0; i < buffer_float.size(); i++) {
+        buffer_bytes[3*i] = floor(buffer_float[i].r >= 1.0f ? 255 : buffer_float[i].r * 256.0f);
+        buffer_bytes[3*i + 1] = floor(buffer_float[i].g >= 1.0f ? 255 : buffer_float[i].g * 256.0f);
+        buffer_bytes[3*i + 2] = floor(buffer_float[i].b >= 1.0f ? 255 : buffer_float[i].b * 256.0f);
+    }
+    
+    stbi_write_png(output, width, height, 3, buffer_bytes.data(), width*3);
 
     delete scene;
     rtcReleaseDevice(g_Device);

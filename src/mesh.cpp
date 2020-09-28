@@ -5,44 +5,33 @@
 #include "globals.h"
 #include "scene.h"
 
-struct Vertex {
-    float x;
-    float y;
-    float z;
-};
-
-struct Triangle {
-    unsigned int v0;
-    unsigned int v1;
-    unsigned int v2;
-};
+using glm::vec3;
 
 namespace Helios {
-    unsigned int Mesh::CreateAndAttach(const Scene& scene, const aiMesh* mesh) {
-        if (mesh) {
-            m_Geometry = rtcNewGeometry(g_Device, RTC_GEOMETRY_TYPE_TRIANGLE);
-
+    unsigned int CreateTriangleMesh(const Scene& scene, 
+                                    std::vector<float>&& vertices_in,
+                                    std::vector<unsigned int>&& indices_in) {            
+            RTCGeometry geometry = rtcNewGeometry(g_Device, RTC_GEOMETRY_TYPE_TRIANGLE);
             // Create and buffer vertex buffer
-            Vertex* vertices = (Vertex*)rtcSetNewGeometryBuffer(m_Geometry, RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT3, sizeof(aiVector3D), mesh->mNumVertices);
-            memcpy(vertices, mesh->mVertices, mesh->mNumVertices);
+            vec3* vertices = (vec3*)rtcSetNewGeometryBuffer(geometry, 
+                                                               RTC_BUFFER_TYPE_VERTEX, 
+                                                               0, RTC_FORMAT_FLOAT3, 
+                                                               3*sizeof(float), 
+                                                               vertices_in.size() / 3);
+            memcpy(vertices, vertices_in.data(), vertices_in.size());
+
+            
 
             // Create and buffer index buffer
-            Triangle* triangles = (Triangle*)rtcSetNewGeometryBuffer(m_Geometry, RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT3, sizeof(Triangle), mesh->mNumFaces);
-            std::vector<Triangle> triangle_vector;
-            for (unsigned int i = 0; i < mesh->mNumFaces; i++) {
-                const aiFace& face = mesh->mFaces[i];
-                assert(face.mNumIndices == 3);
-                triangle_vector.push_back({face.mIndices[0], face.mIndices[1], face.mIndices[2]});
-            }
-            memcpy(triangles, triangle_vector.data(), triangle_vector.size());
-            rtcCommitGeometry(m_Geometry);
-
-            unsigned int geometry_id = rtcAttachGeometry(scene.GetRTCScene(), m_Geometry);
-            rtcReleaseGeometry(m_Geometry);
-
+            unsigned int* indices = (unsigned int*)rtcSetNewGeometryBuffer(geometry, 
+                                                                           RTC_BUFFER_TYPE_INDEX, 
+                                                                           0, RTC_FORMAT_UINT3, 3*sizeof(unsigned int), 
+                                                                           indices_in.size() / 3);
+            memcpy(indices, indices_in.data(), indices_in.size());
+            
+            rtcCommitGeometry(geometry);
+            unsigned int geometry_id = rtcAttachGeometry(scene.GetRTCScene(), geometry);
+            rtcReleaseGeometry(geometry);
             return geometry_id;
-        }
-
-        return RTC_INVALID_GEOMETRY_ID;
     }
 }

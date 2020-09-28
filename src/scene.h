@@ -8,6 +8,8 @@
 #include "camera.h"
 #include "light.h"
 #include "mesh.h"
+#include "entity.h"
+#include "material.h"
 
 namespace Helios {
     class Scene {
@@ -19,13 +21,15 @@ namespace Helios {
         inline RTCScene GetRTCScene() const { return m_Scene; }
         inline void PushCamera(const Camera& camera) { m_Cameras.push_back(camera); }
         inline void PushLight(const Light& light) { m_Lights.push_back(light); }
-        inline void PushGeometryID(const unsigned int object_id) { m_Objects.push_back(object_id); };
+        inline void PushEntity(const Entity& entity) { m_Entities.push_back(entity); };
+        inline void PushMaterial(Material* material) { m_Materials.push_back(material); }
 
         ~Scene();
     private:
-        std::vector<unsigned int> m_Objects;
+        std::vector<Entity> m_Entities;
         std::vector<Camera> m_Cameras;
         std::vector<Light> m_Lights;
+        std::vector<Material*> m_Materials;
 
         RTCScene m_Scene;
     };

@@ -12,9 +12,7 @@ namespace Helios {
 
     class Renderer {
     public:
-        std::vector<Spectrum> Draw(const Scene& scene, int width, int height);
-    private:
-
+        void Draw(std::vector<Spectrum>& buffer, const Scene& scene, int width, int height);
     };
 }
 
