@@ -4,7 +4,7 @@
 #include "renderer.h"
 
 namespace Helios {
-    static Spectrum ray_tracing(const Scene& scene, const RTCRay& ray) {
+    Spectrum Renderer::RayTracing(const Scene& scene, const RTCRay& ray) {
         // hit_record = scene.Intersect(ray);
         RTCIntersectContext context;
         rtcInitIntersectContext(&context);
@@ -14,9 +14,24 @@ namespace Helios {
         rayhit.hit.geomID = RTC_INVALID_GEOMETRY_ID;
         rayhit.hit.instID[0] = RTC_INVALID_GEOMETRY_ID;
 
-        rtcIntersect1(scene.GetRTCScene(), &context, &rayhit);
+        rtcIntersect1(scene.m_Scene, &context, &rayhit);
 
-        if (rayhit.hit.geomID != RTC_INVALID_GEOMETRY_ID) {
+        unsigned int geometry_id = rayhit.hit.geomID;
+
+        //Spectrum final_color = {0.0f, 0.0f, 0.0f}
+        if (geometry_id != RTC_INVALID_GEOMETRY_ID) {
+            /*const Material* mat = scene.m_MaterialMap[geometry_id];
+
+            for (unsigned int i = 0; i < scene.m_Lights[i]; i++) {
+                // get w_i;
+                mat->ProduceBSDF(//hit_record*);
+                Spectrum color = hit_record.bsdf->Evaluate(w_i, w_o);
+
+                if (//reach_light) {
+                    final_color += light_intensity*color;
+                }
+            }*/
+
             return { 0.0f, 1.0f, 0.0f };
         }
 
@@ -34,7 +49,7 @@ namespace Helios {
                     float v = 2.0f*((height - y)/ static_cast<float>(height)) - 1.0f;
                     RTCRay ray = camera.GenerateRay(u, v);
 
-                    buffer[y*width + x] = ray_tracing(scene, ray);
+                    buffer[y*width + x] = RayTracing(scene, ray);
                 }
             }
         }

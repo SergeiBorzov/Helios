@@ -143,7 +143,6 @@ namespace Helios {
             std::vector<float> vertices;
             vertices.resize(3*mesh->mNumVertices);
             // TODO: Instead of multiplying every vertex just set transform in embree
-            //vec3 average = vec3(0.0f);
             for (unsigned int i = 0; i < mesh->mNumVertices; i++) {
                 auto& vertex = mesh->mVertices[i];
                 vec3 v = vec3(local_to_world*vec4(vertex.x, vertex.y, vertex.z, 1.0f));
@@ -151,9 +150,7 @@ namespace Helios {
                 vertices[3*i + 1] = v.y;
                 vertices[3*i + 2] = v.z;
             }
-            //average /= vertices.size();
 
-            //printf("AVERAGE: %f %f %f\n", average.x, average.y, average.z);
 
             std::vector<unsigned int> indices;
             indices.resize(mesh->mNumFaces*3);
@@ -166,10 +163,9 @@ namespace Helios {
             }
 
             // Push entity
-            helios_scene->PushEntity({CreateTriangleMesh(*helios_scene, std::move(vertices), std::move(indices)), mesh->mMaterialIndex});
+            helios_scene->PushEntity(CreateTriangleMesh(*helios_scene, std::move(vertices), std::move(indices)), 
+                                     mesh->mMaterialIndex);
         }
-
-        //rtcSetSceneFlags(helios_scene->GetRTCScene(), RTC_SCENE_FLAG_ROBUST);
 
         rtcCommitScene(helios_scene->GetRTCScene());
         return helios_scene;
