@@ -31,7 +31,7 @@ namespace Helios {
                 shadow_ray.org_x = hit_record.hit_point.x;
                 shadow_ray.org_y = hit_record.hit_point.y;
                 shadow_ray.org_z = hit_record.hit_point.z;
-                shadow_ray.tnear = 0.0f;
+                shadow_ray.tnear = 0.001f;
                 shadow_ray.dir_x = w_i.x;
                 shadow_ray.dir_y = w_i.y;
                 shadow_ray.dir_z = w_i.z;
@@ -40,10 +40,9 @@ namespace Helios {
                 shadow_ray.flags = 0;
 
                 RayHitRecord shadow_hit_record;
-                if (scene.Intersect(shadow_ray, shadow_hit_record)) {
-                    continue;
+                if (!scene.Intersect(shadow_ray, shadow_hit_record)) {
+                    final_color += color*light_intensity*glm::abs(glm::dot(w_i, hit_record.normal));
                 }
-                final_color += color*light_intensity*glm::max(glm::dot(w_i, hit_record.normal), 0.0f);
             }
         }
         

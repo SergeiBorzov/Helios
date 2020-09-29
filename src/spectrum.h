@@ -20,7 +20,7 @@ namespace Helios {
     }
 
     inline Spectrum Spectrum::operator*(const Spectrum& rhs) {
-        return { this->r * rhs.r, this->g * rhs.g, this->b * rhs.b };
+        return { this->r*rhs.r, this->g*rhs.g, this->b*rhs.b };
     }
 
     inline Spectrum Spectrum::operator+(const Spectrum& rhs) {

@@ -18,6 +18,7 @@ namespace Helios {
 
     void Scene::Create() {
         m_Scene = rtcNewScene(g_Device);
+        rtcSetSceneFlags(m_Scene, RTC_SCENE_FLAG_ROBUST);
     }
 
     bool Scene::Intersect(const RTCRay& ray, RayHitRecord& record) const {
@@ -37,7 +38,7 @@ namespace Helios {
             return false;
         }
 
-        record.distance = ray.tfar;
+        record.distance = rayhit.ray.tfar;
         record.normal = glm::normalize(vec3(rayhit.hit.Ng_x, rayhit.hit.Ng_y, rayhit.hit.Ng_z));
         record.hit_point = vec3(ray.org_x, ray.org_y, ray.org_z) + 
                            vec3(ray.dir_x, ray.dir_y, ray.dir_z)*record.distance;
