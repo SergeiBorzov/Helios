@@ -20,6 +20,30 @@ namespace Helios {
         m_Scene = rtcNewScene(g_Device);
     }
 
+    bool Scene::Intersect(const RTCRay& ray, RayHitRecord& record) const {
+        RTCIntersectContext context;
+        rtcInitIntersectContext(&context);
+
+        RTCRayHit rayhit;
+        rayhit.ray = ray;
+        rayhit.hit.geomID = RTC_INVALID_GEOMETRY_ID;
+        rayhit.hit.instID[0] = RTC_INVALID_GEOMETRY_ID;
+
+        rtcIntersect1(m_Scene, &context, &rayhit);
+
+        record.geometry_id = rayhit.hit.geomID;
+
+        if (record.geometry_id == RTC_INVALID_GEOMETRY_ID) {
+            return false;
+        }
+
+        record.distance = ray.tfar;
+        record.hit_point = vec3(ray.org_x, ray.org_y, ray.org_z) + record.distance*vec3(ray.dir_x, ray.dir_y, ray.dir_z);
+        record.normal = glm::normalize(vec3(rayhit.hit.Ng_x, rayhit.hit.Ng_y, rayhit.hit.Ng_z));
+
+        return true;
+    }
+
     Scene* Scene::LoadFromFile(const char* path_to_file) {
         Assimp::Importer importer;
         const aiScene *scene_data = importer.ReadFile(path_to_file, 

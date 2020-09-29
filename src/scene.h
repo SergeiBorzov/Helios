@@ -9,22 +9,26 @@
 #include "camera.h"
 #include "light.h"
 #include "mesh.h"
+#include "RayHitRecord.h"
 #include "entity.h"
 #include "material.h"
 
 namespace Helios {
     class Scene {
-    friend class Renderer;
+    friend class Integrator;
     public:
         static Scene* LoadFromFile(const char* path_to_file);
 
         void Create();
+        bool Intersect(const RTCRay& ray, RayHitRecord& ray_hit_record) const;
+
         inline RTCScene GetRTCScene() const { return m_Scene; }
 
         inline void PushCamera(const Camera& camera) { m_Cameras.push_back(camera); }
         inline void PushLight(const Light& light) { m_Lights.push_back(light); }
         inline void PushEntity(unsigned int geometry_id, unsigned int material_id) { m_MaterialMap.insert({geometry_id, material_id}); };
         inline void PushMaterial(Material* material) { m_Materials.push_back(material); }
+
 
         ~Scene();
     private:

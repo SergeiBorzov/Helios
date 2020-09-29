@@ -8,7 +8,7 @@
 
 #include "globals.h"
 #include "scene.h"
-#include "renderer.h"
+#include "integrator.h"
 
 static bool cmd_check_flag(char **begin, char **end, const std::string& short_flag, const std::string& flag) {
     // try short variant
@@ -77,12 +77,12 @@ static void run(const char* input, const char* output) {
         exit(EXIT_FAILURE);
     }
 
-    Helios::Renderer renderer;
+    Helios::Integrator integrator;
 
     int width = 1920;
     int height = 1080;
     std::vector<Helios::Spectrum> buffer_float;
-    renderer.Draw(buffer_float, *scene, width, height);
+    integrator.Render(buffer_float, *scene, width, height);
 
     std::vector<uint8_t> buffer_bytes;
     buffer_bytes.resize(3*buffer_float.size());

@@ -10,9 +10,9 @@
 
 namespace Helios {
 
-    class Renderer {
+    class Integrator {
     public:
-        void Draw(std::vector<Spectrum>& buffer, const Scene& scene, int width, int height);
+        void Render(std::vector<Spectrum>& buffer, const Scene& scene, int width, int height);
     private:
         Spectrum RayTracing(const Scene& scene, const RTCRay& ray);
     };
