@@ -25,7 +25,7 @@ namespace Helios {
         inline RTCScene GetRTCScene() const { return m_Scene; }
 
         inline void PushCamera(const Camera& camera) { m_Cameras.push_back(camera); }
-        inline void PushLight(const Light& light) { m_Lights.push_back(light); }
+        inline void PushLight(Light* light) { m_Lights.push_back(light); }
         inline void PushEntity(unsigned int geometry_id, unsigned int material_id) { m_MaterialMap.insert({geometry_id, material_id}); };
         inline void PushMaterial(Material* material) { m_Materials.push_back(material); }
 
@@ -34,7 +34,7 @@ namespace Helios {
     private:
         std::unordered_map<unsigned int, unsigned int> m_MaterialMap;
         std::vector<Camera> m_Cameras;
-        std::vector<Light> m_Lights;
+        std::vector<Light*> m_Lights;
         std::vector<Material*> m_Materials;
 
         RTCScene m_Scene;

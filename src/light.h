@@ -9,10 +9,11 @@ namespace Helios {
 
     class Light {
     public:
+        virtual void SampleIntensity(glm::vec3& w_i, Spectrum& intensity) const = 0;
         virtual ~Light() {}
     protected:
         Light(const Spectrum& intensity): m_Intensity(intensity) {}
-
+       
         Spectrum m_Intensity;
     };
 
@@ -21,6 +22,8 @@ namespace Helios {
         DirectionalLight(const glm::vec3& direction, const Spectrum& intensity): 
             Light(intensity), m_Direction(direction)
         {}
+
+        void SampleIntensity(glm::vec3& w_i, Spectrum& intensity) const override;
 
         ~DirectionalLight() {}
     private:

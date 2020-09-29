@@ -11,6 +11,7 @@
 namespace Helios {
     class BxDF {
     public:
+        // Note:: w_o and w_i are in tangent space
         virtual Spectrum Evaluate(const glm::vec3& w_o, const glm::vec3& w_i) = 0;
         virtual ~BxDF() {}
     };
@@ -25,6 +26,8 @@ namespace Helios {
 
     class BSDF {
     public:
+        // Note: w_o and w_i are in world space
+        Spectrum Evaluate(const glm::vec3& w_o, const glm::vec3& w_i) const;
         void Add(std::unique_ptr<BxDF>&& bxdf) { m_BxDFs.push_back(std::move(bxdf)); }
     private:
         glm::mat3 world_to_tangent;

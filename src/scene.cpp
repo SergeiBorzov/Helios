@@ -38,9 +38,9 @@ namespace Helios {
         }
 
         record.distance = ray.tfar;
-        record.hit_point = vec3(ray.org_x, ray.org_y, ray.org_z) + record.distance*vec3(ray.dir_x, ray.dir_y, ray.dir_z);
         record.normal = glm::normalize(vec3(rayhit.hit.Ng_x, rayhit.hit.Ng_y, rayhit.hit.Ng_z));
-
+        record.hit_point = vec3(ray.org_x, ray.org_y, ray.org_z) + 
+                           vec3(ray.dir_x, ray.dir_y, ray.dir_z)*record.distance;
         return true;
     }
 
@@ -65,6 +65,7 @@ namespace Helios {
         for (unsigned int i = 0; i < scene_data->mNumCameras; i++) {
             auto& camera = scene_data->mCameras[i];
             aiNode* camera_node = root_node->FindNode(camera->mName);
+            assert(camera_node);
 
             // Apply all parent transforms, we need world coordinates
             aiMatrix4x4 cam_to_world_ai;
@@ -110,12 +111,25 @@ namespace Helios {
 
         for (unsigned int i = 0; i < scene_data->mNumLights; i++) {
             auto& light = scene_data->mLights[i];
-            
+            aiNode* light_node = root_node->FindNode(light->mName);
+            assert(light_node);
+
+            aiMatrix4x4 light_to_world_ai;
+            while (light_node != root_node) {
+                light_to_world_ai = light_node->mTransformation*light_to_world_ai;
+                light_node = light_node->mParent;
+            }
+
+            glm::mat3 light_to_world;
+            light_to_world[0] = vec3(light_to_world_ai.a1, light_to_world_ai.b1, light_to_world_ai.c1);
+            light_to_world[1] = vec3(light_to_world_ai.a2, light_to_world_ai.b2, light_to_world_ai.c2);
+            light_to_world[2] = vec3(light_to_world_ai.a3, light_to_world_ai.b3, light_to_world_ai.c3);
+
             switch(light->mType) {
                 case aiLightSource_DIRECTIONAL: {
-                    vec3 dir = normalize(vec3(light->mDirection.x, light->mDirection.y, light->mDirection.z));
+                    vec3 dir = normalize(light_to_world*vec3(light->mDirection.x, light->mDirection.y, light->mDirection.z));
                     Spectrum intensity = { light->mColorDiffuse.r, light->mColorDiffuse.b, light->mColorDiffuse.b };
-                    helios_scene->PushLight(DirectionalLight(dir, intensity));
+                    helios_scene->PushLight(new DirectionalLight(-dir, intensity));
                     break;
                 }
                 default: {
@@ -200,6 +214,9 @@ namespace Helios {
             rtcReleaseScene(m_Scene);
         }
 
+        for (unsigned int i = 0; i < m_Lights.size(); i++) {
+            delete m_Lights[i];
+        }
         for (unsigned int i = 0; i < m_Materials.size(); i++) {
             delete m_Materials[i];
         }
