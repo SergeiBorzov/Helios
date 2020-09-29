@@ -16,7 +16,13 @@ set(CMAKE_CXX_FLAGS "-Wall -g -pedantic")
 set(CMAKE_CXX_STANDARD 17)
 
 file(GLOB Sources
-   "src/*.cpp"
+   "src/*.cpp",
+   "src/Core/*.cpp",
+   "src/Integrator/*.cpp",
+   "src/Scene/*.cpp",
+   "src/Camera/*.cpp",
+   "src/Material/*.cpp",
+   "src/Light/*.cpp"
 )
 
 add_executable(Helios ${Sources})

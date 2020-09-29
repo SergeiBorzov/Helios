@@ -1,8 +1,8 @@
 #ifndef HELIOS_MATERIAL_H
 #define HELIOS_MATERIAL_H
 
-#include "spectrum.h"
-#include "RayHitRecord.h"
+#include "../Core/Spectrum.h"
+#include "../Core/RayHitRecord.h"
 
 namespace Helios {
     class Material {

@@ -1,8 +1,8 @@
 #include <cstdio>
 
-#include "globals.h"
-#include "bxdf.h"
-#include "integrator.h"
+#include "../Core/Globals.h"
+#include "../Material/Bxdf.h"
+#include "Integrator.h"
 
 using glm::vec3;
 

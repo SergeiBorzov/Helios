@@ -1,6 +1,6 @@
 #include <glm/gtc/constants.hpp>
 
-#include "bxdf.h"
+#include "Bxdf.h"
 
 using glm::vec3;
 

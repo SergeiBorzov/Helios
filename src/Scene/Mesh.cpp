@@ -2,8 +2,8 @@
 #include <cstring> // for memcpy
 #include <vector>
 
-#include "globals.h"
-#include "scene.h"
+#include "../Core/Globals.h"
+#include "../Scene/Scene.h"
 
 using glm::vec3;
 

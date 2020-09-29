@@ -6,9 +6,9 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
 
-#include "globals.h"
-#include "scene.h"
-#include "integrator.h"
+#include "Core/Globals.h"
+#include "Scene/Scene.h"
+#include "Integrator/Integrator.h"
 
 static bool cmd_check_flag(char **begin, char **end, const std::string& short_flag, const std::string& flag) {
     // try short variant

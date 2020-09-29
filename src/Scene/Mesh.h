@@ -6,7 +6,6 @@
 #include <glm/glm.hpp>
 #include <embree3/rtcore.h>
 
-
 namespace Helios {
     class Scene;
 

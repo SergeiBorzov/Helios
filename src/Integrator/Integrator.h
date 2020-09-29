@@ -5,8 +5,8 @@
 
 #include <embree3/rtcore.h>
 
-#include "spectrum.h"
-#include "scene.h"
+#include "../Core/Spectrum.h"
+#include "../Scene/Scene.h"
 
 namespace Helios {
 

@@ -6,7 +6,7 @@
 
 #include <glm/glm.hpp>
 
-#include "spectrum.h"
+#include "../Core/Spectrum.h"
 
 namespace Helios {
     class BxDF {

@@ -1,5 +1,5 @@
-#include "material.h"
-#include "bxdf.h"
+#include "Material.h"
+#include "Bxdf.h"
 
 namespace Helios {
     void Matte::ProduceBSDF(RayHitRecord& record) const {

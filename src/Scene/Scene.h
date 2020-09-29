@@ -6,12 +6,11 @@
 
 #include <embree3/rtcore.h>
 
-#include "camera.h"
-#include "light.h"
-#include "mesh.h"
-#include "RayHitRecord.h"
-#include "entity.h"
-#include "material.h"
+#include "../Core/RayHitRecord.h"
+#include "../Camera/Camera.h"
+#include "../Light/Light.h"
+#include "../Material/Material.h"
+#include "Mesh.h"
 
 namespace Helios {
     class Scene {

@@ -1,4 +1,4 @@
-#include "light.h"
+#include "Light.h"
 
 using glm::vec3;
 

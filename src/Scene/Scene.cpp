@@ -6,8 +6,8 @@
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>     // Post processing flags
 
-#include "globals.h"
-#include "scene.h"
+#include "../Core/Globals.h"
+#include "Scene.h"
 
 using glm::vec3;
 using glm::vec4;
