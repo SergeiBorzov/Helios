@@ -29,11 +29,11 @@ namespace Helios {
         // Note: w_o and w_i are in world space
         Spectrum Evaluate(const glm::vec3& w_o, const glm::vec3& w_i) const;
         void Add(std::unique_ptr<BxDF>&& bxdf) { m_BxDFs.push_back(std::move(bxdf)); }
+
+        glm::vec3 normal;
     private:
         glm::mat3 world_to_tangent;
         glm::mat3 tangent_to_world;
-
-        glm::vec3 normal;
 
         std::vector<std::unique_ptr<BxDF>> m_BxDFs;
     };

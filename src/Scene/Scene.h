@@ -10,7 +10,6 @@
 #include "../Camera/Camera.h"
 #include "../Light/Light.h"
 #include "../Material/Material.h"
-#include "Mesh.h"
 
 namespace Helios {
     class Scene {
@@ -20,6 +19,7 @@ namespace Helios {
 
         void Create();
         bool Intersect(const RTCRay& ray, RayHitRecord& ray_hit_record) const;
+        bool Occluded(RTCRay& ray) const;
 
         inline RTCScene GetRTCScene() const { return m_Scene; }
 
@@ -27,7 +27,6 @@ namespace Helios {
         inline void PushLight(Light* light) { m_Lights.push_back(light); }
         inline void PushEntity(unsigned int geometry_id, unsigned int material_id) { m_MaterialMap.insert({geometry_id, material_id}); };
         inline void PushMaterial(Material* material) { m_Materials.push_back(material); }
-
 
         ~Scene();
     private:
