@@ -5,8 +5,8 @@
       <author>Blender User</author>
       <authoring_tool>Blender 2.90.0 commit date:2020-08-31, commit time:11:26, hash:0330d1af29c0</authoring_tool>
     </contributor>
-    <created>2020-09-28T05:03:37</created>
-    <modified>2020-09-28T05:03:37</modified>
+    <created>2020-10-01T02:31:02</created>
+    <modified>2020-10-01T02:31:02</modified>
     <unit name="meter" meter="1"/>
     <up_axis>Z_UP</up_axis>
   </asset>
@@ -34,16 +34,13 @@
   <library_lights>
     <light id="Light-light" name="Light">
       <technique_common>
-        <point>
-          <color sid="color">1000 1000 1000</color>
-          <constant_attenuation>1</constant_attenuation>
-          <linear_attenuation>0</linear_attenuation>
-          <quadratic_attenuation>0.00111109</quadratic_attenuation>
-        </point>
+        <directional>
+          <color sid="color">10 10 10</color>
+        </directional>
       </technique_common>
       <extra>
         <technique profile="blender">
-          <type sid="type" type="int">0</type>
+          <type sid="type" type="int">1</type>
           <flag sid="flag" type="int">0</flag>
           <mode sid="mode" type="int">1</mode>
           <gamma sid="blender_gamma" type="float">1</gamma>
@@ -53,7 +50,7 @@
           <shadow_r sid="blender_shadow_r" type="float">0</shadow_r>
           <shadow_g sid="blender_shadow_g" type="float">0</shadow_g>
           <shadow_b sid="blender_shadow_b" type="float">0</shadow_b>
-          <energy sid="blender_energy" type="float">1000</energy>
+          <energy sid="blender_energy" type="float">10</energy>
           <dist sid="blender_dist" type="float">29.99998</dist>
           <spotsize sid="spotsize" type="float">75</spotsize>
           <spotblend sid="spotblend" type="float">0.15</spotblend>
@@ -76,15 +73,25 @@
     </light>
   </library_lights>
   <library_effects>
-    <effect id="Material-effect">
+    <effect id="Box-effect">
       <profile_COMMON>
+        <newparam sid="Marble006_4K_Color_png-surface">
+          <surface type="2D">
+            <init_from>Marble006_4K_Color_png</init_from>
+          </surface>
+        </newparam>
+        <newparam sid="Marble006_4K_Color_png-sampler">
+          <sampler2D>
+            <source>Marble006_4K_Color_png-surface</source>
+          </sampler2D>
+        </newparam>
         <technique sid="common">
           <lambert>
             <emission>
               <color sid="emission">0 0 0 1</color>
             </emission>
             <diffuse>
-              <color sid="diffuse">0.8 0.8 0.8 1</color>
+              <texture texture="Marble006_4K_Color_png-sampler" texcoord="UVMap"/>
             </diffuse>
             <index_of_refraction>
               <float sid="ior">1.45</float>
@@ -94,13 +101,59 @@
       </profile_COMMON>
     </effect>
   </library_effects>
-  <library_images/>
+  <library_images>
+    <image id="Marble006_4K_Color_png" name="Marble006_4K_Color_png">
+      <init_from>/Users/sergeiborzov/Downloads/Marble/Marble006_4K_Color.png</init_from>
+    </image>
+  </library_images>
   <library_materials>
-    <material id="Material-material" name="Material">
-      <instance_effect url="#Material-effect"/>
+    <material id="Box-material" name="Box">
+      <instance_effect url="#Box-effect"/>
     </material>
   </library_materials>
   <library_geometries>
+    <geometry id="Plane-mesh" name="Plane">
+      <mesh>
+        <source id="Plane-mesh-positions">
+          <float_array id="Plane-mesh-positions-array" count="12">-1 -1 0 1 -1 0 -1 1 0 1 1 0</float_array>
+          <technique_common>
+            <accessor source="#Plane-mesh-positions-array" count="4" stride="3">
+              <param name="X" type="float"/>
+              <param name="Y" type="float"/>
+              <param name="Z" type="float"/>
+            </accessor>
+          </technique_common>
+        </source>
+        <source id="Plane-mesh-normals">
+          <float_array id="Plane-mesh-normals-array" count="3">0 0 1</float_array>
+          <technique_common>
+            <accessor source="#Plane-mesh-normals-array" count="1" stride="3">
+              <param name="X" type="float"/>
+              <param name="Y" type="float"/>
+              <param name="Z" type="float"/>
+            </accessor>
+          </technique_common>
+        </source>
+        <source id="Plane-mesh-map-0">
+          <float_array id="Plane-mesh-map-0-array" count="12">1 0 0 1 0 0 1 0 1 1 0 1</float_array>
+          <technique_common>
+            <accessor source="#Plane-mesh-map-0-array" count="6" stride="2">
+              <param name="S" type="float"/>
+              <param name="T" type="float"/>
+            </accessor>
+          </technique_common>
+        </source>
+        <vertices id="Plane-mesh-vertices">
+          <input semantic="POSITION" source="#Plane-mesh-positions"/>
+        </vertices>
+        <triangles count="2">
+          <input semantic="VERTEX" source="#Plane-mesh-vertices" offset="0"/>
+          <input semantic="NORMAL" source="#Plane-mesh-normals" offset="1"/>
+          <input semantic="TEXCOORD" source="#Plane-mesh-map-0" offset="2" set="0"/>
+          <p>1 0 0 2 0 1 0 0 2 1 0 3 3 0 4 2 0 5</p>
+        </triangles>
+      </mesh>
+    </geometry>
     <geometry id="Cube-mesh" name="Cube">
       <mesh>
         <source id="Cube-mesh-positions">
@@ -124,7 +177,7 @@
           </technique_common>
         </source>
         <source id="Cube-mesh-map-0">
-          <float_array id="Cube-mesh-map-0-array" count="72">0.875 0.5 0.625 0.75 0.625 0.5 0.625 0.75 0.375 1 0.375 0.75 0.625 0 0.375 0.25 0.375 0 0.375 0.5 0.125 0.75 0.125 0.5 0.625 0.5 0.375 0.75 0.375 0.5 0.625 0.25 0.375 0.5 0.375 0.25 0.875 0.5 0.875 0.75 0.625 0.75 0.625 0.75 0.625 1 0.375 1 0.625 0 0.625 0.25 0.375 0.25 0.375 0.5 0.375 0.75 0.125 0.75 0.625 0.5 0.625 0.75 0.375 0.75 0.625 0.25 0.625 0.5 0.375 0.5</float_array>
+          <float_array id="Cube-mesh-map-0-array" count="72">0 1 1 0 1 1 1 1 0 0 1 0 0 1 1 0 0 0 1 1 0 0 0 1 1 1 0 0 1 0 0 1 1 0 0 0 0 1 0 0 1 0 1 1 0 1 0 0 0 1 1 1 1 0 1 1 1 0 0 0 1 1 0 1 0 0 0 1 1 1 1 0</float_array>
           <technique_common>
             <accessor source="#Cube-mesh-map-0-array" count="36" stride="2">
               <param name="S" type="float"/>
@@ -135,7 +188,7 @@
         <vertices id="Cube-mesh-vertices">
           <input semantic="POSITION" source="#Cube-mesh-positions"/>
         </vertices>
-        <triangles material="Material-material" count="12">
+        <triangles material="Box-material" count="12">
           <input semantic="VERTEX" source="#Cube-mesh-vertices" offset="0"/>
           <input semantic="NORMAL" source="#Cube-mesh-normals" offset="1"/>
           <input semantic="TEXCOORD" source="#Cube-mesh-map-0" offset="2" set="0"/>
@@ -146,8 +199,12 @@
   </library_geometries>
   <library_visual_scenes>
     <visual_scene id="Scene" name="Scene">
+      <node id="Plane" name="Plane" type="NODE">
+        <matrix sid="transform">3.627485 0 0 0 0 0 3.627485 0 0 -3.627485 0 0 0 0 0 1</matrix>
+        <instance_geometry url="#Plane-mesh" name="Plane"/>
+      </node>
       <node id="Camera" name="Camera" type="NODE">
-        <matrix sid="transform">1 0 0 0 0 1 -4.37114e-8 0 0 4.37114e-8 1 12.78577 0 0 0 1</matrix>
+        <matrix sid="transform">0.6859207 -0.3240135 0.6515582 6.035426 0 0.8953956 0.4452714 5.111995 -0.7276763 -0.3054208 0.6141704 5.678268 0 0 0 1</matrix>
         <instance_camera url="#Camera-camera"/>
       </node>
       <node id="Light" name="Light" type="NODE">
@@ -155,11 +212,11 @@
         <instance_light url="#Light-light"/>
       </node>
       <node id="Cube" name="Cube" type="NODE">
-        <matrix sid="transform">-0.5798105 0.8147513 0 0 0 0 1 0 0.8147513 0.5798105 0 0 0 0 0 1</matrix>
+        <matrix sid="transform">1 0 0 0 0 0 1 0.9869891 0 -1 0 0 0 0 0 1</matrix>
         <instance_geometry url="#Cube-mesh" name="Cube">
           <bind_material>
             <technique_common>
-              <instance_material symbol="Material-material" target="#Material-material">
+              <instance_material symbol="Box-material" target="#Box-material">
                 <bind_vertex_input semantic="UVMap" input_semantic="TEXCOORD" input_set="0"/>
               </instance_material>
             </technique_common>

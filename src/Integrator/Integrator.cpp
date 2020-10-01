@@ -31,7 +31,7 @@ namespace Helios {
                 shadow_ray.org_x = hit_record.hit_point.x;
                 shadow_ray.org_y = hit_record.hit_point.y;
                 shadow_ray.org_z = hit_record.hit_point.z;
-                shadow_ray.tnear = 0.01f;
+                shadow_ray.tnear = 0.0f;
                 shadow_ray.dir_x = w_i.x;
                 shadow_ray.dir_y = w_i.y;
                 shadow_ray.dir_z = w_i.z;

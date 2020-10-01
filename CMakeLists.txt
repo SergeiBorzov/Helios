@@ -22,7 +22,8 @@ file(GLOB Sources
    "src/Scene/*.cpp",
    "src/Camera/*.cpp",
    "src/Material/*.cpp",
-   "src/Light/*.cpp"
+   "src/Light/*.cpp",
+   "src/Texture/*.cpp"
 )
 
 add_executable(Helios ${Sources})

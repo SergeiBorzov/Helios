@@ -10,6 +10,8 @@
 #include "../Camera/Camera.h"
 #include "../Light/Light.h"
 #include "../Material/Material.h"
+#include "../Texture/Texture.h"
+#include "TriangleMesh.h"
 
 namespace Helios {
     class Scene {
@@ -25,15 +27,18 @@ namespace Helios {
 
         inline void PushCamera(const Camera& camera) { m_Cameras.push_back(camera); }
         inline void PushLight(Light* light) { m_Lights.push_back(light); }
-        inline void PushEntity(unsigned int geometry_id, unsigned int material_id) { m_MaterialMap.insert({geometry_id, material_id}); };
+        inline void PushEntity(const TriangleMesh& mesh, unsigned int material_id);
         inline void PushMaterial(Material* material) { m_Materials.push_back(material); }
+        inline void PushTexture(const char* name, const std::shared_ptr<Texture>& texture) { m_TextureMap.insert({name, texture}); }
 
         ~Scene();
     private:
-        std::unordered_map<unsigned int, unsigned int> m_MaterialMap;
         std::vector<Camera> m_Cameras;
         std::vector<Light*> m_Lights;
         std::vector<Material*> m_Materials;
+        std::vector<TriangleMesh> m_TriangleMeshes;
+        std::unordered_map<unsigned int, unsigned int> m_MaterialMap;
+        std::unordered_map<const char*, std::shared_ptr<Texture>> m_TextureMap; 
 
         RTCScene m_Scene;
     };

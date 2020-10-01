@@ -18,7 +18,7 @@ namespace Helios {
         void ProduceBSDF(RayHitRecord& record) const;
         ~Matte() {}
     private:
-        Spectrum m_Diffuse;
+        Spectrum m_Diffuse;   
     };
 }
 

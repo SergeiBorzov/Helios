@@ -1,9 +1,7 @@
 
 #include <cstdio>
-#include <cmath>
+#include <filesystem>
 
-#include <glm/glm.hpp>
-#include <glm/gtc/type_ptr.hpp>
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>     // Post processing flags
@@ -11,60 +9,19 @@
 #include "../Core/Globals.h"
 #include "Scene.h"
 
-using glm::vec3;
-using glm::vec4;
-using glm::mat4;
-
+using namespace glm;
 
 namespace Helios {
-
-    unsigned int CreateTriangleMesh(const Scene& scene, 
-                                    std::vector<vec3>&& vertices_in,
-                                    std::vector<unsigned int>&& indices_in,
-                                    std::vector<vec3>&& normals_in) {         
-            RTCGeometry geometry = rtcNewGeometry(g_Device, RTC_GEOMETRY_TYPE_TRIANGLE);
-            // Create and buffer vertex buffer
-            vec3* vertices = 
-                (vec3*)rtcSetNewGeometryBuffer(geometry, 
-                                                RTC_BUFFER_TYPE_VERTEX, 
-                                                0, RTC_FORMAT_FLOAT3, 
-                                                sizeof(vec3), 
-                                                vertices_in.size());
-            memcpy(vertices, vertices_in.data(), sizeof(vec3)*vertices_in.size());
-
-            
-
-            // Create and buffer index buffer
-            unsigned int* indices = 
-                (unsigned int*)rtcSetNewGeometryBuffer(geometry, 
-                                                       RTC_BUFFER_TYPE_INDEX, 
-                                                       0, RTC_FORMAT_UINT3, 
-                                                       3*sizeof(unsigned int), 
-                                                       indices_in.size() / 3);
-            memcpy(indices, indices_in.data(), sizeof(unsigned int)*indices_in.size());
-            
-            unsigned int attribute_count = 0;
-            if (!normals_in.empty()) {
-                ++attribute_count;
-                rtcSetGeometryVertexAttributeCount(geometry, attribute_count);
-
-                vec3* normals = 
-                    (vec3*)rtcSetNewGeometryBuffer(geometry,
-                                                   RTC_BUFFER_TYPE_VERTEX_ATTRIBUTE,
-                                                   0, RTC_FORMAT_FLOAT3,
-                                                   sizeof(vec3), normals_in.size());
-                memcpy(normals, normals_in.data(), sizeof(vec3)*normals_in.size());
-            }
-           
-            rtcCommitGeometry(geometry);
-            unsigned int geometry_id = rtcAttachGeometry(scene.GetRTCScene(), geometry);
-            rtcReleaseGeometry(geometry);
-            return geometry_id;
-    }
 
     void Scene::Create() {
         m_Scene = rtcNewScene(g_Device);
         //rtcSetSceneFlags(m_Scene, RTC_SCENE_FLAG_ROBUST);
+    }
+
+    void Scene::PushEntity(const TriangleMesh& mesh, unsigned int material_id) {
+        unsigned int geometry_id = rtcAttachGeometry(m_Scene, mesh.GetRTCGeometry());
+        m_TriangleMeshes.push_back(mesh);
+        m_MaterialMap.insert({geometry_id, material_id});
     }
 
     bool Scene::Intersect(const RTCRay& ray, RayHitRecord& record) const {
@@ -86,13 +43,13 @@ namespace Helios {
         }
 
         record.distance = rayhit.ray.tfar;
-        record.normal = glm::normalize(vec3(rayhit.hit.Ng_x, rayhit.hit.Ng_y, rayhit.hit.Ng_z));
+        record.normal = normalize(vec3(rayhit.hit.Ng_x, rayhit.hit.Ng_y, rayhit.hit.Ng_z));
        
         vec3 shading_normal;
 
         rtcInterpolate0(rtcGetGeometry(m_Scene, rayhit.hit.geomID), rayhit.hit.primID, rayhit.hit.u, rayhit.hit.v,
                             RTC_BUFFER_TYPE_VERTEX_ATTRIBUTE, 0, &shading_normal.x, 3);
-        record.shading_normal = glm::normalize(shading_normal);
+        record.shading_normal = normalize(shading_normal);
 
         record.hit_point = vec3(ray.org_x, ray.org_y, ray.org_z) + 
                            vec3(ray.dir_x, ray.dir_y, ray.dir_z)*record.distance +
@@ -145,7 +102,7 @@ namespace Helios {
             cam_to_world[2] = vec4(cam_to_world_ai.a3, cam_to_world_ai.b3, cam_to_world_ai.c3, cam_to_world_ai.d3);
             cam_to_world[3] = vec4(cam_to_world_ai.a4, cam_to_world_ai.b4, cam_to_world_ai.c4, cam_to_world_ai.d4);
 
-            mat4 view = glm::inverse(cam_to_world);
+            mat4 view = inverse(cam_to_world);
             view[3] = cam_to_world[3];
             
             PerspectiveCamera helios_cam(atan(tan(camera->mHorizontalFOV)/camera->mAspect), 
@@ -170,7 +127,7 @@ namespace Helios {
                 light_node = light_node->mParent;
             }
 
-            glm::mat3 light_to_world;
+            mat3 light_to_world;
             light_to_world[0] = vec3(light_to_world_ai.a1, light_to_world_ai.b1, light_to_world_ai.c1);
             light_to_world[1] = vec3(light_to_world_ai.a2, light_to_world_ai.b2, light_to_world_ai.c2);
             light_to_world[2] = vec3(light_to_world_ai.a3, light_to_world_ai.b3, light_to_world_ai.c3);
@@ -196,8 +153,43 @@ namespace Helios {
             // Load materials
             auto& material = scene_data->mMaterials[i];
 
+            // Get diffuse color:
             aiColor4D diffuse (1.0f, 1.0f, 1.0f, 1.0f);
             aiGetMaterialColor(material, AI_MATKEY_COLOR_DIFFUSE, &diffuse);
+
+            // Get diffuse texture:
+            aiString texture_path_ai;
+            if (material->Get(AI_MATKEY_TEXTURE(aiTextureType_DIFFUSE, 0), texture_path_ai) == AI_SUCCESS) {
+                printf("Texture Path: %s\n", texture_path_ai.C_Str());
+            }
+
+            if (auto texture = scene_data->GetEmbeddedTexture(texture_path_ai.C_Str())) {
+                // Note: Returned pointer is not null, texture is embedded we now have texture data in 'texture'
+                // TODO
+                assert(false);
+            } else {
+                // Note: Regular file, check if it exists and read
+                std::filesystem::path texture_path = std::filesystem::path(texture_path_ai.C_Str());
+
+                if (texture_path.is_relative()) {
+                    // texture_path = path_from_launch + relative_path
+                }
+
+                const char* texture_path_c = texture_path.u8string().c_str();
+                std::shared_ptr<Texture> helios_texture = std::make_shared<Texture>();
+                if (helios_texture->LoadFromFile(texture_path_c)) {
+                    helios_scene->PushTexture(texture_path_c, helios_texture);
+                } else {
+                    // Warning texture wasn't loaded
+                    printf("Warning: Couldn't load texture '%s'\n", texture_path_c);
+                }
+
+                //regular file, check if it exists and read it
+            }
+            /*if (material->GetTexture(
+                    aiTextureType_DIFFUSE, 0, 
+                    &path_to_texture, nullptr, nullptr, nullptr, nullptr, nullptr) == AI_SUCCESS) {
+            }*/
 
             helios_scene->PushMaterial(new Matte({diffuse.r, diffuse.g, diffuse.b}));
         }
@@ -253,19 +245,29 @@ namespace Helios {
                 normals.resize(mesh->mNumVertices);
                 for (unsigned int i = 0; i < mesh->mNumVertices; i++) {
                     auto& normal = mesh->mNormals[i];
-                    normals[i] = glm::normalize((local_to_world*vec4(normal.x, normal.y, normal.z, 0.0f)));
-                    assert(!std::isnan(normals[i].x));
-                    assert(!std::isnan(normals[i].y));
-                    assert(!std::isnan(normals[i].z));
+                    normals[i] = normalize((local_to_world*vec4(normal.x, normal.y, normal.z, 0.0f)));
+                }
+            }
+
+            // Create uvs buffer
+            std::vector<vec2> uvs;
+
+            if (mesh->HasTextureCoords(0)) {
+                // For now load only one set of basic texture coordinates
+                assert(mesh->mNumUVComponents[0] == 2);
+                uvs.resize(mesh->mNumVertices);
+                for (unsigned int i = 0; i < mesh->mNumVertices; i++) {
+                    auto& uv = mesh->mTextureCoords[0][i];
+                    uvs[i] = vec2(uv.x, uv.y);
                 }
             }
            
             // Push entity
-            helios_scene->PushEntity(CreateTriangleMesh(*helios_scene, 
-                                                        std::move(vertices), 
-                                                        std::move(indices),
-                                                        std::move(normals)), 
-                                                        mesh->mMaterialIndex);
+            TriangleMesh helios_mesh;
+            helios_mesh.Create(std::move(vertices), std::move(indices), 
+                               std::move(normals), std::move(uvs));
+
+            helios_scene->PushEntity(helios_mesh, mesh->mMaterialIndex);
         }
 
         rtcCommitScene(helios_scene->GetRTCScene());
@@ -277,9 +279,14 @@ namespace Helios {
             rtcReleaseScene(m_Scene);
         }
 
+        for (unsigned int i = 0; i < m_TriangleMeshes.size(); i++) {
+            m_TriangleMeshes[i].Release();
+        }
+
         for (unsigned int i = 0; i < m_Lights.size(); i++) {
             delete m_Lights[i];
         }
+
         for (unsigned int i = 0; i < m_Materials.size(); i++) {
             delete m_Materials[i];
         }
