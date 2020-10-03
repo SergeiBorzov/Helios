@@ -18,7 +18,7 @@ namespace Helios {
     class Scene {
     friend class Integrator;
     public:
-        static Scene* LoadFromFile(const char* path_to_file);
+        static Scene* LoadFromFile(const char* path_to_file, int width, int height);
 
         void Create();
         bool Intersect(const RTCRay& ray, RayHitRecord& ray_hit_record) const;

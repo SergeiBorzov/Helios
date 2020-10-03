@@ -2,7 +2,9 @@
 #include <cstdio>
 #include <algorithm>
 #include <string>
+#include <string_view>
 #include <filesystem>
+#include <charconv>
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
@@ -51,7 +53,15 @@ static char* cmd_find_option(char** begin, char** end, const std::string& short_
 }
 
 static void print_usage() {
-    printf("Here usage will be described\n");
+    printf("Usage of ./Helios :\n");
+    printf("-i path/filename\n");
+    printf("\t Specify scene input file (Current supported scene formats: glTF 2.0)\n");
+    printf("-o path/filename\n");
+    printf("\t Specify output filename\n");
+    printf("--width value\n");
+    printf("\t Specify image width (default value 1920)");
+    printf("--height value\n");
+    printf("\t Specify image height (default value 1080)");
 }
 
 static void print_error() {
@@ -62,7 +72,7 @@ void error_callback(void*, enum RTCError error, const char* str) {
     printf("Embree error %d: %s\n", error, str);
 }
 
-static void run(const char* input, const char* output) {
+static void run(const char* input, const char* output, int width, int height) {
     g_Device = rtcNewDevice(nullptr);
 
     if (!g_Device) {
@@ -70,7 +80,7 @@ static void run(const char* input, const char* output) {
     }
     rtcSetDeviceErrorFunction(g_Device, error_callback, nullptr);
 
-    Helios::Scene* scene = Helios::Scene::LoadFromFile(input);
+    Helios::Scene* scene = Helios::Scene::LoadFromFile(input, width, height);
 
     if (!scene) {
         printf("Failed to load scene: %s\n", input);
@@ -80,8 +90,6 @@ static void run(const char* input, const char* output) {
 
     Helios::Integrator integrator;
 
-    int width = 1920;
-    int height = 1080;
     std::vector<Helios::Spectrum> buffer_float;
     printf("Info: Rendering...\n");
     integrator.Render(buffer_float, *scene, width, height);
@@ -107,6 +115,8 @@ static void run(const char* input, const char* output) {
 // Globals:
 RTCDevice g_Device;
 
+namespace fs = std::filesystem;
+
 int main(int argc, char** argv) {
     if (argc > 1) {
         if (cmd_check_flag(argv, argv + argc, "h", "help")) {
@@ -119,14 +129,51 @@ int main(int argc, char** argv) {
             print_error();
             exit(EXIT_FAILURE);
         }
+        else {
+            std::string extension = fs::path(scene_filename).extension().u8string();
+            if (extension != ".gltf") {
+                printf("Error: Wrong scene format %s, only glTF 2.0 is supported currently\n", extension.c_str());
+                exit(EXIT_FAILURE);
+            }
+        }
 
         char* output_image = cmd_find_option(argv, argv + argc, "o", "");
         if (!output_image) {
             print_error();
             exit(EXIT_FAILURE);
         }
+        else {
+            std::string extension = fs::path(output_image).extension().u8string();
+            if (extension != ".png") {
+                printf("Error: Wrong output image format %s, only PNG is supported currently\n", extension.c_str());
+                exit(EXIT_FAILURE);
+            }
+        }
 
-        run(scene_filename, output_image);
+        int width = 1920;
+        int height = 1080;
+
+        char* width_option = cmd_find_option(argv, argv + argc, "", "width");
+        if (width_option) {
+            std::string_view width_sv = std::string_view(width_option);
+            auto result = std::from_chars(width_sv.data(), width_sv.data() + width_sv.size(), width);
+            if (result.ec == std::errc::invalid_argument) {
+                print_error();
+                exit(EXIT_FAILURE);
+            }
+        }        
+
+        char* height_option = cmd_find_option(argv, argv + argc, "", "height");
+        if (height_option) {
+            std::string_view height_sv = std::string_view(height_option);
+            auto result = std::from_chars(height_sv.data(), height_sv.data() + height_sv.size(), height);
+            if (result.ec == std::errc::invalid_argument) {
+                print_error();
+                exit(EXIT_FAILURE);
+            }
+        }
+
+        run(scene_filename, output_image, width, height);
     }
     else {
         print_error();

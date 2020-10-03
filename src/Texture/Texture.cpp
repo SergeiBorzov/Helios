@@ -10,8 +10,8 @@ namespace Helios {
     Spectrum Texture::operator()(float u, float v) const {
         assert(m_Data);
 
-        int x = static_cast<int>(u*m_Width);
-        int y = static_cast<int>((1.0f - v)*m_Height);
+        int x = static_cast<int>(u*m_Width) % m_Width;
+        int y = static_cast<int>(v*m_Height) % m_Height;
 
         int start_index = y*m_Width*m_NumChannels + x*m_NumChannels;
         switch (m_NumChannels) {

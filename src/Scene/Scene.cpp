@@ -112,7 +112,7 @@ namespace Helios {
         }
        
         record.hit_point = vec3(ray.org_x, ray.org_y, ray.org_z) + 
-                           vec3(ray.dir_x, ray.dir_y, ray.dir_z)*record.distance +
+                           normalize(vec3(ray.dir_x, ray.dir_y, ray.dir_z))*record.distance +
                            record.shading_normal*0.01f;
         return true;
     }
@@ -126,7 +126,7 @@ namespace Helios {
         return ray.tfar < 0.0f;
     }
 
-    Scene* Scene::LoadFromFile(const char* path_to_file) {
+    Scene* Scene::LoadFromFile(const char* path_to_file, int width, int height) {
         Assimp::Importer importer;
         const aiScene *scene_data = importer.ReadFile(path_to_file, 
                                                       aiProcess_Triangulate |
@@ -169,8 +169,9 @@ namespace Helios {
             mat4 view = inverse(cam_to_world);
             view[3] = cam_to_world[3];
             
-            PerspectiveCamera helios_cam(atan(tan(camera->mHorizontalFOV)/camera->mAspect), 
-                                         camera->mAspect, 
+            float aspect = static_cast<float>(width)/height;
+            PerspectiveCamera helios_cam(atan(tan(camera->mHorizontalFOV)/aspect), 
+                                         aspect, 
                                          camera->mClipPlaneNear, 
                                          camera->mClipPlaneFar);
             helios_cam.SetView(view);
@@ -232,7 +233,7 @@ namespace Helios {
                                                 helios_diffuse_texture, 
                                                 helios_normal_map));
         }
-        printf("Info: Loaded %u materials\n", scene_data->mNumLights);
+        printf("Info: Loaded %u materials\n", scene_data->mNumMaterials);
 
 
         // 4) Load geometry
@@ -318,7 +319,7 @@ namespace Helios {
 
             helios_scene->AddEntity(helios_mesh, mesh->mMaterialIndex);
         }
-        printf("Info: Loaded %u meshes\n", scene_data->mNumLights);
+        printf("Info: Loaded %u meshes\n", scene_data->mNumMeshes);
 
 
         rtcCommitScene(helios_scene->GetRTCScene());
