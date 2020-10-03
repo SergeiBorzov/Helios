@@ -11,6 +11,7 @@ Roadmap
 ### Integrator
 - [x] Ray tracing
 - [ ] Path tracing
+- [ ] Bidirectional path tracing
 ### Lights
 - [x] Directional light
 - [ ] Point light
