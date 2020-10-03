@@ -2,6 +2,19 @@ Helios
 =========
 CPU renderer I work on in my spare time to improve my understanding of rendering techniques and algorithms.
 
+Usage:
+-------------
+```
+Usage of ./Helios :
+-i path/filename
+         Specify scene input file (Current supported scene formats: glTF 2.0)
+-o path/filename
+         Specify output filename (Current supported formats: PNG)
+--width value
+         Specify image width in pixels (default value 1920)
+--height value
+         Specify image height in pixels (default value 1080)
+```
 Roadmap
 ------------
 ### Scene formats
