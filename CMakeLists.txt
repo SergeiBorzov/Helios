@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16.3)
+cmake_minimum_required(VERSION 2.8.11)
 
 project(Helios)
 
@@ -16,13 +16,13 @@ set(CMAKE_CXX_FLAGS "-Wall -g -pedantic")
 set(CMAKE_CXX_STANDARD 17)
 
 file(GLOB Sources
-   "src/*.cpp",
-   "src/Core/*.cpp",
-   "src/Integrator/*.cpp",
-   "src/Scene/*.cpp",
-   "src/Camera/*.cpp",
-   "src/Material/*.cpp",
-   "src/Light/*.cpp",
+   "src/*.cpp"
+   "src/Core/*.cpp"
+   "src/Integrator/*.cpp"
+   "src/Scene/*.cpp"
+   "src/Camera/*.cpp"
+   "src/Material/*.cpp"
+   "src/Light/*.cpp" 
    "src/Texture/*.cpp"
 )
 
