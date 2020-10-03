@@ -113,7 +113,7 @@ namespace Helios {
        
         record.hit_point = vec3(ray.org_x, ray.org_y, ray.org_z) + 
                            normalize(vec3(ray.dir_x, ray.dir_y, ray.dir_z))*record.distance +
-                           record.shading_normal*0.01f;
+                           record.normal*0.01f;
         return true;
     }
 
