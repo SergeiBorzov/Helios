@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 2.8.11)
 project(Helios)
 
 find_package(Embree 3.0 REQUIRED)
-find_package(assimp)
+find_package(assimp 5.0 REQUIRED)
 find_package(glm CONFIG REQUIRED)
 
 # assimp cmake fix https://github.com/ros-planning/geometric_shapes/issues/23
