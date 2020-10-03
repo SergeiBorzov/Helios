@@ -9,6 +9,7 @@ namespace Helios {
         Spectrum operator*(const Spectrum& rhs);
         Spectrum operator+(const Spectrum& rhs);
         Spectrum& operator+=(const Spectrum& rhs);
+        Spectrum& operator*=(const Spectrum& rhs);
 
         float r;
         float g;
@@ -31,6 +32,13 @@ namespace Helios {
         this->r += rhs.r; 
         this->g += rhs.g; 
         this->b += rhs.b; 
+        return *this;
+    }
+
+    inline Spectrum& Spectrum::operator*=(const Spectrum& rhs) {
+        this->r *= rhs.r; 
+        this->g *= rhs.g; 
+        this->b *= rhs.b; 
         return *this;
     }
 

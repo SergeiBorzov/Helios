@@ -4,23 +4,64 @@
 
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
-#include <assimp/postprocess.h>     // Post processing flags
+#include <assimp/postprocess.h>
 
 #include "../Core/Globals.h"
 #include "Scene.h"
 
 using namespace glm;
 
+
+static std::shared_ptr<Helios::Texture> 
+LoadTextureToScene(Helios::Scene& helios_scene, const std::filesystem::path& path_to_scene,
+                   const aiScene& scene_data, const aiMaterial& material, aiTextureType texture_type) {
+    std::shared_ptr<Helios::Texture> helios_texture = nullptr; // result
+
+    aiString texture_path_ai;
+    if (material.Get(AI_MATKEY_TEXTURE(texture_type, 0), texture_path_ai) == AI_SUCCESS) {
+        // Check the cache first
+        if (helios_scene.HasTexture(texture_path_ai.C_Str())) {
+            helios_texture = helios_scene.GetTexture(texture_path_ai.C_Str());
+        } else {
+            if (auto texture = scene_data.GetEmbeddedTexture(texture_path_ai.C_Str())) {
+                    // Note: Returned pointer is not null, texture is embedded we now have texture data in 'texture'
+                    // TODO:
+                    assert(false);
+            } else {
+                // Note: Texture is not embedded, regular file work, check if it exists and read
+                std::filesystem::path texture_path = std::filesystem::path(texture_path_ai.C_Str());
+                // Create absolute path
+                if (texture_path.is_relative()) {
+                    texture_path = path_to_scene / texture_path;
+                }
+
+                helios_texture = std::make_shared<Helios::Texture>();
+
+                if (helios_texture->LoadFromFile(texture_path.u8string().c_str())) {
+                    helios_scene.AddTexture(texture_path_ai.C_Str(), helios_texture);
+                    printf("Info: Loaded texture %s\n", texture_path_ai.C_Str());
+                } else {
+                    // Some error during texture loading
+                    helios_texture = nullptr;
+                    fprintf(stderr, "Warning: Couldn't load texture %s\n", texture_path.u8string().c_str());
+                }
+            }
+        }
+    }   
+    return helios_texture;
+}
+
+
 namespace Helios {
 
     void Scene::Create() {
         m_Scene = rtcNewScene(g_Device);
-        //rtcSetSceneFlags(m_Scene, RTC_SCENE_FLAG_ROBUST);
+        //rtcSetSceneFlags(....);
     }
 
-    void Scene::PushEntity(const TriangleMesh& mesh, unsigned int material_id) {
+    void Scene::AddEntity(const TriangleMesh& mesh, unsigned int material_id) {
         unsigned int geometry_id = rtcAttachGeometry(m_Scene, mesh.GetRTCGeometry());
-        m_TriangleMeshes.push_back(mesh);
+        m_TriangleMeshes.insert({geometry_id, mesh});
         m_MaterialMap.insert({geometry_id, material_id});
     }
 
@@ -44,16 +85,35 @@ namespace Helios {
 
         record.distance = rayhit.ray.tfar;
         record.normal = normalize(vec3(rayhit.hit.Ng_x, rayhit.hit.Ng_y, rayhit.hit.Ng_z));
-       
-        vec3 shading_normal;
+        record.shading_normal = record.normal;
 
-        rtcInterpolate0(rtcGetGeometry(m_Scene, rayhit.hit.geomID), rayhit.hit.primID, rayhit.hit.u, rayhit.hit.v,
+        auto& hitted_geometry = m_TriangleMeshes.find(rayhit.hit.geomID)->second;
+
+        if (hitted_geometry.HasNormals()) {
+            vec3 shading_normal;
+            rtcInterpolate0(hitted_geometry.GetRTCGeometry(), rayhit.hit.primID, rayhit.hit.u, rayhit.hit.v,
                             RTC_BUFFER_TYPE_VERTEX_ATTRIBUTE, 0, &shading_normal.x, 3);
-        record.shading_normal = normalize(shading_normal);
+            record.shading_normal = normalize(shading_normal);
+        }
 
+        if (hitted_geometry.HasUVs()) {
+            vec2 uv;
+            rtcInterpolate0(hitted_geometry.GetRTCGeometry(), rayhit.hit.primID, rayhit.hit.u, rayhit.hit.v,
+                            RTC_BUFFER_TYPE_VERTEX_ATTRIBUTE, 1, &uv.x, 2);
+            record.uv = uv;
+        }
+
+        // Note: Assimp will generate tangents for us if we have uvs and normals
+        if (hitted_geometry.HasNormals() && hitted_geometry.HasUVs()) {
+            vec3 tangent;
+            rtcInterpolate0(hitted_geometry.GetRTCGeometry(), rayhit.hit.primID, rayhit.hit.u, rayhit.hit.v,
+                            RTC_BUFFER_TYPE_VERTEX_ATTRIBUTE, 2, &tangent.x, 3);
+            record.tangent = normalize(tangent);
+        }
+       
         record.hit_point = vec3(ray.org_x, ray.org_y, ray.org_z) + 
                            vec3(ray.dir_x, ray.dir_y, ray.dir_z)*record.distance +
-                           shading_normal*0.01f;
+                           record.shading_normal*0.01f;
         return true;
     }
 
@@ -70,20 +130,24 @@ namespace Helios {
         Assimp::Importer importer;
         const aiScene *scene_data = importer.ReadFile(path_to_file, 
                                                       aiProcess_Triangulate |
-                                                      aiProcess_FlipUVs);
+                                                      aiProcess_CalcTangentSpace 
+                                                     );
+
+        std::filesystem::path path_to_scene = std::filesystem::path(path_to_file).parent_path();
 
         Scene* helios_scene = new Scene();
         helios_scene->Create();
+
+
 
         // Failed to load file
         if (!scene_data) {
             return nullptr;
         }
 
-        // 1) Load cameras
-        printf("Found %d cameras\n", scene_data->mNumCameras);
         aiNode* root_node = scene_data->mRootNode;
 
+        // 1) Load cameras
         for (unsigned int i = 0; i < scene_data->mNumCameras; i++) {
             auto& camera = scene_data->mCameras[i];
             aiNode* camera_node = root_node->FindNode(camera->mName);
@@ -110,12 +174,11 @@ namespace Helios {
                                          camera->mClipPlaneNear, 
                                          camera->mClipPlaneFar);
             helios_cam.SetView(view);
-            helios_scene->PushCamera(helios_cam);
+            helios_scene->AddCamera(helios_cam);
         }
+        printf("Info: Loaded %u cameras\n", scene_data->mNumCameras);
 
         // 2) Load lights
-        printf("Found %d lights\n", scene_data->mNumLights);
-
         for (unsigned int i = 0; i < scene_data->mNumLights; i++) {
             auto& light = scene_data->mLights[i];
             aiNode* light_node = root_node->FindNode(light->mName);
@@ -136,7 +199,7 @@ namespace Helios {
                 case aiLightSource_DIRECTIONAL: {
                     vec3 dir = normalize(light_to_world*vec3(light->mDirection.x, light->mDirection.y, light->mDirection.z));
                     Spectrum intensity = { light->mColorDiffuse.r, light->mColorDiffuse.b, light->mColorDiffuse.b };
-                    helios_scene->PushLight(new DirectionalLight(-dir, intensity));
+                    helios_scene->AddLight(new DirectionalLight(-dir, intensity));
                     break;
                 }
                 default: {
@@ -145,10 +208,10 @@ namespace Helios {
                 }
             }
         }
+        printf("Info: Loaded %u lights\n", scene_data->mNumLights);
+
 
         // 3) Load materials
-        printf("Found %d materials\n", scene_data->mNumMaterials);
-
         for (unsigned int i = 0; i < scene_data->mNumMaterials; i++) {
             // Load materials
             auto& material = scene_data->mMaterials[i];
@@ -158,45 +221,21 @@ namespace Helios {
             aiGetMaterialColor(material, AI_MATKEY_COLOR_DIFFUSE, &diffuse);
 
             // Get diffuse texture:
-            aiString texture_path_ai;
-            if (material->Get(AI_MATKEY_TEXTURE(aiTextureType_DIFFUSE, 0), texture_path_ai) == AI_SUCCESS) {
-                printf("Texture Path: %s\n", texture_path_ai.C_Str());
-            }
+            std::shared_ptr<Texture> helios_diffuse_texture = 
+                LoadTextureToScene(*helios_scene, path_to_scene, *scene_data, *material, aiTextureType_DIFFUSE);
+            
+            // Get normal texture:
+            std::shared_ptr<Texture> helios_normal_map = 
+                LoadTextureToScene(*helios_scene, path_to_scene, *scene_data, *material, aiTextureType_NORMALS);
 
-            if (auto texture = scene_data->GetEmbeddedTexture(texture_path_ai.C_Str())) {
-                // Note: Returned pointer is not null, texture is embedded we now have texture data in 'texture'
-                // TODO
-                assert(false);
-            } else {
-                // Note: Regular file, check if it exists and read
-                std::filesystem::path texture_path = std::filesystem::path(texture_path_ai.C_Str());
-
-                if (texture_path.is_relative()) {
-                    // texture_path = path_from_launch + relative_path
-                }
-
-                const char* texture_path_c = texture_path.u8string().c_str();
-                std::shared_ptr<Texture> helios_texture = std::make_shared<Texture>();
-                if (helios_texture->LoadFromFile(texture_path_c)) {
-                    helios_scene->PushTexture(texture_path_c, helios_texture);
-                } else {
-                    // Warning texture wasn't loaded
-                    printf("Warning: Couldn't load texture '%s'\n", texture_path_c);
-                }
-
-                //regular file, check if it exists and read it
-            }
-            /*if (material->GetTexture(
-                    aiTextureType_DIFFUSE, 0, 
-                    &path_to_texture, nullptr, nullptr, nullptr, nullptr, nullptr) == AI_SUCCESS) {
-            }*/
-
-            helios_scene->PushMaterial(new Matte({diffuse.r, diffuse.g, diffuse.b}));
+            helios_scene->AddMaterial(new Matte({diffuse.r, diffuse.g, diffuse.b}, 
+                                                helios_diffuse_texture, 
+                                                helios_normal_map));
         }
+        printf("Info: Loaded %u materials\n", scene_data->mNumLights);
+
 
         // 4) Load geometry
-        printf("Found %d meshes\n", scene_data->mNumMeshes);
-
         for (unsigned int i = 0; i < scene_data->mNumMeshes; i++) {
             const auto& mesh = scene_data->mMeshes[i];
             aiNode* mesh_node = root_node->FindNode(mesh->mName);
@@ -251,7 +290,6 @@ namespace Helios {
 
             // Create uvs buffer
             std::vector<vec2> uvs;
-
             if (mesh->HasTextureCoords(0)) {
                 // For now load only one set of basic texture coordinates
                 assert(mesh->mNumUVComponents[0] == 2);
@@ -261,14 +299,27 @@ namespace Helios {
                     uvs[i] = vec2(uv.x, uv.y);
                 }
             }
+
+            // Create tangent buffer
+            std::vector<vec3> tangents;
+            if (mesh->HasTangentsAndBitangents()) {
+                tangents.resize(mesh->mNumVertices);
+                for (unsigned int i = 0; i < mesh->mNumVertices; i++) {
+                    auto& tangent = mesh->mTangents[i];
+                    tangents[i] = vec3(tangent.x, tangent.y, tangent.z);
+                }
+            }
            
-            // Push entity
+            // Add entity
             TriangleMesh helios_mesh;
             helios_mesh.Create(std::move(vertices), std::move(indices), 
-                               std::move(normals), std::move(uvs));
+                               std::move(normals), std::move(uvs),
+                               std::move(tangents));
 
-            helios_scene->PushEntity(helios_mesh, mesh->mMaterialIndex);
+            helios_scene->AddEntity(helios_mesh, mesh->mMaterialIndex);
         }
+        printf("Info: Loaded %u meshes\n", scene_data->mNumLights);
+
 
         rtcCommitScene(helios_scene->GetRTCScene());
         return helios_scene;
@@ -279,8 +330,8 @@ namespace Helios {
             rtcReleaseScene(m_Scene);
         }
 
-        for (unsigned int i = 0; i < m_TriangleMeshes.size(); i++) {
-            m_TriangleMeshes[i].Release();
+        for (auto& item: m_TriangleMeshes) {
+            item.second.Release();
         }
 
         for (unsigned int i = 0; i < m_Lights.size(); i++) {

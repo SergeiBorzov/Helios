@@ -2,6 +2,7 @@
 #include <cstdio>
 #include <algorithm>
 #include <string>
+#include <filesystem>
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
@@ -82,16 +83,19 @@ static void run(const char* input, const char* output) {
     int width = 1920;
     int height = 1080;
     std::vector<Helios::Spectrum> buffer_float;
+    printf("Info: Rendering...\n");
     integrator.Render(buffer_float, *scene, width, height);
 
     std::vector<uint8_t> buffer_bytes;
     buffer_bytes.resize(3*buffer_float.size());
 
+    printf("Info: Writing result to file...\n");
     for (unsigned int i = 0; i < buffer_float.size(); i++) {
         buffer_bytes[3*i] = floor(buffer_float[i].r >= 1.0f ? 255 : buffer_float[i].r * 256.0f);
         buffer_bytes[3*i + 1] = floor(buffer_float[i].g >= 1.0f ? 255 : buffer_float[i].g * 256.0f);
         buffer_bytes[3*i + 2] = floor(buffer_float[i].b >= 1.0f ? 255 : buffer_float[i].b * 256.0f);
     }
+    printf("Info: Done!\n");
     
     stbi_write_png(output, width, height, 3, buffer_bytes.data(), width*3);
 

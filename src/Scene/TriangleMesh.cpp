@@ -7,7 +7,8 @@ namespace Helios {
     void TriangleMesh::Create(std::vector<vec3>&& vertices_in,
                               std::vector<unsigned int>&& indices_in, 
                               std::vector<vec3>&& normals_in,
-                              std::vector<vec2>&& uvs_in) {
+                              std::vector<vec2>&& uvs_in,
+                              std::vector<vec3>&& tangents_in) {
         m_Geometry = rtcNewGeometry(g_Device, RTC_GEOMETRY_TYPE_TRIANGLE);
 
         // Create and buffer vertex buffer
@@ -45,6 +46,10 @@ namespace Helios {
             m_HasUVs = true;
         }
 
+        if (!tangents_in.empty()) {
+            ++attribute_count;
+        }
+
         rtcSetGeometryVertexAttributeCount(m_Geometry, attribute_count);
         // Create and buffer normals
         if (!normals_in.empty()) {
@@ -64,6 +69,16 @@ namespace Helios {
                                                1, RTC_FORMAT_FLOAT2,
                                                sizeof(vec2), uvs_in.size());
             memcpy(uvs, uvs_in.data(), sizeof(vec2)*uvs_in.size());
+        }
+
+         // Create and buffer tangents
+        if (!tangents_in.empty()) {
+            vec3* tangents = 
+                (vec3*)rtcSetNewGeometryBuffer(m_Geometry,
+                                               RTC_BUFFER_TYPE_VERTEX_ATTRIBUTE,
+                                               2, RTC_FORMAT_FLOAT3,
+                                               sizeof(vec3), tangents_in.size());
+            memcpy(tangents, tangents_in.data(), sizeof(vec3)*tangents_in.size());
         }
            
         rtcCommitGeometry(m_Geometry);

@@ -13,7 +13,7 @@ namespace Helios {
         int x = static_cast<int>(u*m_Width);
         int y = static_cast<int>((1.0f - v)*m_Height);
 
-        int start_index = y*m_Width*m_NumChannels + x;
+        int start_index = y*m_Width*m_NumChannels + x*m_NumChannels;
         switch (m_NumChannels) {
             case 1: {
                 float value = m_Data[start_index] / 255.0f;
@@ -24,9 +24,16 @@ namespace Helios {
                 float value_2 = m_Data[start_index + 1] / 255.0f;
                 return { value_1, value_2, 0.0f};
             }
-            case 3:
+            case 3: {
+                float value_1 = m_Data[start_index + 0] / 255.0f;
+                float value_2 = m_Data[start_index + 1] / 255.0f;
+                float value_3 = m_Data[start_index + 2] / 255.0f;
+                return { value_1, value_2, value_3 };
+                break;
+                //printf("HEY!\n");
+            }
             case 4:  {
-                float value_1 = m_Data[start_index] / 255.0f;
+                float value_1 = m_Data[start_index + 0] / 255.0f;
                 float value_2 = m_Data[start_index + 1] / 255.0f;
                 float value_3 = m_Data[start_index + 2] / 255.0f;
                 return { value_1, value_2, value_3 };
@@ -40,7 +47,7 @@ namespace Helios {
     }
 
     bool Texture::LoadFromFile(const char* path_to_file) {
-        m_Data = stbi_load(path_to_file, &m_Width, &m_Height, &m_NumChannels, 4);
+        m_Data = stbi_load(path_to_file, &m_Width, &m_Height, &m_NumChannels, 0);
         return m_Data;
     }
 

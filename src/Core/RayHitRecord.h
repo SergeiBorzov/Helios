@@ -11,10 +11,13 @@ namespace Helios {
     class BSDF;
 
     struct RayHitRecord{
+        std::shared_ptr<BSDF> bsdf = nullptr;
         glm::vec3 hit_point;
         glm::vec3 normal; // normalized geometric normal
         glm::vec3 shading_normal;
-        std::shared_ptr<BSDF> bsdf = nullptr;
+        glm::vec3 tangent;
+        glm::vec3 bitangent;
+        glm::vec2 uv;
         float distance;
         unsigned int geometry_id;
         unsigned int primitive_id;

@@ -18,7 +18,7 @@ namespace Helios {
 
         Spectrum operator()(float u, float v) const;
 
-        ~Texture();
+        virtual ~Texture();
     private:
         unsigned char* m_Data = nullptr;
         int m_Width = 0;

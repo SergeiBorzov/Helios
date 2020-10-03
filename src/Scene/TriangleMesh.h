@@ -12,8 +12,11 @@ namespace Helios {
         void Create(std::vector<glm::vec3>&& vertices,
                     std::vector<unsigned int>&& indices,
                     std::vector<glm::vec3>&& normals,
-                    std::vector<glm::vec2>&& uvs);
+                    std::vector<glm::vec2>&& uvs,
+                    std::vector<glm::vec3>&& tangents);         
         inline RTCGeometry GetRTCGeometry() const { return m_Geometry; }
+        inline bool HasNormals() const { return m_HasNormals; }
+        inline bool HasUVs() const { return m_HasUVs; }
         void Release();
     private:
         RTCGeometry m_Geometry = nullptr;
