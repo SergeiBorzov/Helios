@@ -59,9 +59,9 @@ static void print_usage() {
     printf("-o path/filename\n");
     printf("\t Specify output filename\n");
     printf("--width value\n");
-    printf("\t Specify image width (default value 1920)");
+    printf("\t Specify image width (default value 1920)\n");
     printf("--height value\n");
-    printf("\t Specify image height (default value 1080)");
+    printf("\t Specify image height (default value 1080)\n");
 }
 
 static void print_error() {

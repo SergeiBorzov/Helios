@@ -44,6 +44,7 @@ namespace Helios {
                 break;
             }
         }
+        return {0.0f, 0.0f, 0.0f};
     }
 
     bool Texture::LoadFromFile(const char* path_to_file) {

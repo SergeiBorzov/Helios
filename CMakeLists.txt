@@ -12,7 +12,9 @@ find_library(
     NAMES assimp
 )
 
-set(CMAKE_CXX_FLAGS "-Wall -g -pedantic -O2")
+set(CMAKE_CXX_FLAGS_DEBUG_INIT "-Wall -Wextra -g -pedantic")
+set(CMAKE_CXX_FLAGS_RELEASE_INIT "-Wall -O2")
+
 set(CMAKE_CXX_STANDARD 17)
 
 file(GLOB Sources
