@@ -191,16 +191,22 @@ namespace Helios {
                 light_node = light_node->mParent;
             }
 
-            mat3 light_to_world;
-            light_to_world[0] = vec3(light_to_world_ai.a1, light_to_world_ai.b1, light_to_world_ai.c1);
-            light_to_world[1] = vec3(light_to_world_ai.a2, light_to_world_ai.b2, light_to_world_ai.c2);
-            light_to_world[2] = vec3(light_to_world_ai.a3, light_to_world_ai.b3, light_to_world_ai.c3);
+            mat4 light_to_world;
+            light_to_world[0] = vec4(light_to_world_ai.a1, light_to_world_ai.b1, light_to_world_ai.c1, 0.0f);
+            light_to_world[1] = vec4(light_to_world_ai.a2, light_to_world_ai.b2, light_to_world_ai.c2, 0.0f);
+            light_to_world[2] = vec4(light_to_world_ai.a3, light_to_world_ai.b3, light_to_world_ai.c3, 0.0f);
+            light_to_world[3] = vec4(light_to_world_ai.a4, light_to_world_ai.b4, light_to_world_ai.c4, 1.0f);
 
+            Spectrum intensity = { light->mColorDiffuse.r, light->mColorDiffuse.b, light->mColorDiffuse.b };
             switch(light->mType) {
                 case aiLightSource_DIRECTIONAL: {
-                    vec3 dir = normalize(light_to_world*vec3(light->mDirection.x, light->mDirection.y, light->mDirection.z));
-                    Spectrum intensity = { light->mColorDiffuse.r, light->mColorDiffuse.b, light->mColorDiffuse.b };
+                    vec3 dir = normalize(mat3(light_to_world)*vec3(light->mDirection.x, light->mDirection.y, light->mDirection.z));
                     helios_scene->AddLight(new DirectionalLight(-dir, intensity));
+                    break;
+                }
+                case aiLightSource_POINT: {
+                    vec3 position = vec3(light_to_world[3].x, light_to_world[3].y, light_to_world[3].z);
+                    helios_scene->AddLight(new PointLight(position, intensity));
                     break;
                 }
                 default: {

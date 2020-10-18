@@ -5,9 +5,10 @@ namespace Helios {
     
     // Helios uses linear sRGB color space
     struct Spectrum {
-        Spectrum operator*(float value);
-        Spectrum operator*(const Spectrum& rhs);
-        Spectrum operator+(const Spectrum& rhs);
+        Spectrum operator*(float value) const;
+        Spectrum operator/(float value) const;
+        Spectrum operator*(const Spectrum& rhs) const;
+        Spectrum operator+(const Spectrum& rhs) const;
         Spectrum& operator+=(const Spectrum& rhs);
         Spectrum& operator*=(const Spectrum& rhs);
 
@@ -16,15 +17,19 @@ namespace Helios {
         float b;
     };
 
-    inline Spectrum Spectrum::operator*(float value) {
+    inline Spectrum Spectrum::operator*(float value) const {
         return { r*value, b*value, g*value };
     }
 
-    inline Spectrum Spectrum::operator*(const Spectrum& rhs) {
+    inline Spectrum Spectrum::operator/(float value) const {
+        return { r/value, b/value, g/value };
+    }
+
+    inline Spectrum Spectrum::operator*(const Spectrum& rhs) const {
         return { this->r*rhs.r, this->g*rhs.g, this->b*rhs.b };
     }
 
-    inline Spectrum Spectrum::operator+(const Spectrum& rhs) {
+    inline Spectrum Spectrum::operator+(const Spectrum& rhs) const {
         return { this->r + rhs.r, this->g + rhs.g, this->b + rhs.b };
     }
 
@@ -41,10 +46,6 @@ namespace Helios {
         this->b *= rhs.b; 
         return *this;
     }
-
-
-
-    
 
 }
 

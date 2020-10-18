@@ -4,12 +4,13 @@
 #include <glm/glm.hpp>
 
 #include "../Core/Spectrum.h"
+#include "../Core/RayHitRecord.h"
 
 namespace Helios {
 
     class Light {
     public:
-        virtual void SampleIntensity(glm::vec3& w_i, Spectrum& intensity) const = 0;
+        virtual void SampleIntensity(const RayHitRecord& record, glm::vec3& w_i, Spectrum& intensity) const = 0;
         virtual ~Light() {}
     protected:
         Light(const Spectrum& intensity): m_Intensity(intensity) {}
@@ -23,11 +24,23 @@ namespace Helios {
             Light(intensity), m_Direction(direction)
         {}
 
-        void SampleIntensity(glm::vec3& w_i, Spectrum& intensity) const override;
+        void SampleIntensity(const RayHitRecord& record, glm::vec3& w_i, Spectrum& intensity) const override;
 
         ~DirectionalLight() {}
     private:
         glm::vec3 m_Direction;
+    };
+
+    class PointLight: public Light {
+    public:
+        PointLight(const glm::vec3& position, Spectrum& intensity):
+            Light(intensity), m_Position(position)
+        {}
+
+        void SampleIntensity(const RayHitRecord& record, glm::vec3& w_i, Spectrum& intensity) const override;
+        ~PointLight() {}
+    private:
+        glm::vec3 m_Position;
     };
 
 }

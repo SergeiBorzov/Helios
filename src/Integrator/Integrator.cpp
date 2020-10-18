@@ -23,7 +23,7 @@ namespace Helios {
             for (unsigned int i = 0; i < scene.m_Lights.size(); i++) {
                 Spectrum light_intensity = {0.0f, 0.0f, 0.0f};
                 vec3 w_i = vec3(0.0f);
-                scene.m_Lights[i]->SampleIntensity(w_i, light_intensity);
+                scene.m_Lights[i]->SampleIntensity(hit_record, w_i, light_intensity);
 
                 Spectrum color = hit_record.bsdf->Evaluate(w_o, w_i);
 
