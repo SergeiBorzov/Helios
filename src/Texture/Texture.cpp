@@ -11,7 +11,7 @@ namespace Helios {
         assert(m_Data);
 
         int x = static_cast<int>(u*m_Width) % m_Width;
-        int y = static_cast<int>(v*m_Height) % m_Height;
+        int y = m_Height - static_cast<int>(v*m_Height) % m_Height;
 
         int start_index = y*m_Width*m_NumChannels + x*m_NumChannels;
         switch (m_NumChannels) {
