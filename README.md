@@ -27,7 +27,7 @@ Roadmap
 - [ ] Bidirectional path tracing
 ### Lights
 - [x] Directional light
-- [ ] Point light
+- [x] Point light
 - [ ] Spot light
 - [ ] Area light
 - [ ] Emitters
