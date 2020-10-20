@@ -2,13 +2,16 @@
 #define HELIOS_TEXTURE_H
 
 #include <memory>
+#include <vector>
 
 #include "../Core/Spectrum.h"
 
 namespace Helios {
     class Texture {
     public:
-        bool LoadFromFile(const char* path_to_file);
+        enum ColorSpace { Linear, sRGB };
+
+        bool LoadFromFile(const char* path_to_file, ColorSpace color_space);
 
         inline int GetWidth() const { return m_Width; }
         inline int GetHeight() const { return m_Height; }
@@ -18,9 +21,9 @@ namespace Helios {
 
         Spectrum operator()(float u, float v) const;
 
-        virtual ~Texture();
+        ~Texture() {}
     private:
-        unsigned char* m_Data = nullptr;
+        std::vector<float> m_Data;
         int m_Width = 0;
         int m_Height = 0;
         int m_NumChannels = 0;

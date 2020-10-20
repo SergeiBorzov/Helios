@@ -48,8 +48,8 @@ namespace Helios {
         return final_color;
     }
 
-    void Integrator::Render(std::vector<Spectrum>& buffer, const Scene& scene, int width, int height) {
-        buffer.resize(width*height);
+    void Integrator::Render(std::vector<float>& image_lrgb, const Scene& scene, int width, int height) {
+        image_lrgb.resize(width*height*3);
 
         // Render image from each camera of the scene
         for (const auto& camera: scene.m_Cameras) {
@@ -59,7 +59,10 @@ namespace Helios {
                     float v = 2.0f*((height - y)/ static_cast<float>(height)) - 1.0f;
                     RTCRay ray = camera.GenerateRay(u, v);
 
-                    buffer[y*width + x] = RayTracing(scene, ray);
+                    Spectrum pixel_color = RayTracing(scene, ray);
+                    image_lrgb[y*width*3 + x*3 + 0] = glm::clamp(pixel_color.r, 0.0f, 1.0f);
+                    image_lrgb[y*width*3 + x*3 + 1] = glm::clamp(pixel_color.g, 0.0f, 1.0f);
+                    image_lrgb[y*width*3 + x*3 + 2] = glm::clamp(pixel_color.b, 0.0f, 1.0f);
                 }
             }
         }

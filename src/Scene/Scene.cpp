@@ -37,7 +37,23 @@ LoadTextureToScene(Helios::Scene& helios_scene, const std::filesystem::path& pat
 
                 helios_texture = std::make_shared<Helios::Texture>();
 
-                if (helios_texture->LoadFromFile(texture_path.u8string().c_str())) {
+                bool load_succesful = false;
+                switch(texture_type) {
+                    case aiTextureType_DIFFUSE: {
+                        load_succesful = helios_texture->LoadFromFile(texture_path.u8string().c_str(), 
+                                                                      Helios::Texture::ColorSpace::sRGB);
+                        break;
+                    }
+                    case aiTextureType_NORMALS: {
+                        load_succesful = helios_texture->LoadFromFile(texture_path.u8string().c_str(), 
+                                                                      Helios::Texture::ColorSpace::Linear);
+                        break;
+                    }
+                    default:
+                        break;
+                }
+
+                if (load_succesful) {
                     helios_scene.AddTexture(texture_path_ai.C_Str(), helios_texture);
                     printf("Info: Loaded texture %s\n", texture_path_ai.C_Str());
                 } else {
@@ -197,7 +213,7 @@ namespace Helios {
             light_to_world[2] = vec4(light_to_world_ai.a3, light_to_world_ai.b3, light_to_world_ai.c3, 0.0f);
             light_to_world[3] = vec4(light_to_world_ai.a4, light_to_world_ai.b4, light_to_world_ai.c4, 1.0f);
 
-            Spectrum intensity = { light->mColorDiffuse.r, light->mColorDiffuse.b, light->mColorDiffuse.b };
+            Spectrum intensity = { light->mColorDiffuse.r, light->mColorDiffuse.g, light->mColorDiffuse.b };
             switch(light->mType) {
                 case aiLightSource_DIRECTIONAL: {
                     vec3 dir = normalize(mat3(light_to_world)*vec3(light->mDirection.x, light->mDirection.y, light->mDirection.z));

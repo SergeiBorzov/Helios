@@ -12,7 +12,7 @@ namespace Helios {
 
     class Integrator {
     public:
-        void Render(std::vector<Spectrum>& buffer, const Scene& scene, int width, int height);
+        void Render(std::vector<float>& image_lrgb, const Scene& scene, int width, int height);
     private:
         Spectrum RayTracing(const Scene& scene, const RTCRay& ray);
     };
