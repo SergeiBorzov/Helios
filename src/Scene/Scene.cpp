@@ -2,11 +2,14 @@
 #include <cstdio>
 #include <filesystem>
 
+#include <glm/gtc/constants.hpp>
+
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
 
 #include "../Core/Globals.h"
+#include "../Core/ColorSpaces.h"
 #include "Scene.h"
 
 using namespace glm;
@@ -213,14 +216,18 @@ namespace Helios {
             light_to_world[2] = vec4(light_to_world_ai.a3, light_to_world_ai.b3, light_to_world_ai.c3, 0.0f);
             light_to_world[3] = vec4(light_to_world_ai.a4, light_to_world_ai.b4, light_to_world_ai.c4, 1.0f);
 
-            Spectrum intensity = { light->mColorDiffuse.r, light->mColorDiffuse.g, light->mColorDiffuse.b };
+            
             switch(light->mType) {
                 case aiLightSource_DIRECTIONAL: {
+                    glm::vec3 tmp = vec3(light->mColorDiffuse.r, light->mColorDiffuse.g, light->mColorDiffuse.b);
+                    Spectrum intensity = { tmp.r, tmp.g, tmp.b }; // Something is wrong here, result differs from Cycles
                     vec3 dir = normalize(mat3(light_to_world)*vec3(light->mDirection.x, light->mDirection.y, light->mDirection.z));
                     helios_scene->AddLight(new DirectionalLight(-dir, intensity));
                     break;
                 }
                 case aiLightSource_POINT: {
+                    glm::vec3 tmp = vec3(light->mColorDiffuse.r, light->mColorDiffuse.g, light->mColorDiffuse.b) / (4.0f * glm::pi<float>());
+                    Spectrum intensity = { tmp.r, tmp.g, tmp.b };
                     vec3 position = vec3(light_to_world[3].x, light_to_world[3].y, light_to_world[3].z);
                     helios_scene->AddLight(new PointLight(position, intensity));
                     break;

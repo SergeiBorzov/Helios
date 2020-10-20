@@ -40,7 +40,7 @@ namespace Helios {
                 shadow_ray.flags = 0;
 
                 if (!scene.Occluded(shadow_ray)) {
-                    final_color += color*light_intensity*glm::max(glm::dot(w_i, hit_record.shading_normal), 0.0f);
+                    final_color += light_intensity*color*glm::max(glm::dot(w_i, hit_record.shading_normal), 0.0f);
                 }
             }
         }
