@@ -5,6 +5,7 @@ namespace Helios {
     
     // Helios uses linear sRGB color space
     struct Spectrum {
+        Spectrum(float red, float green, float blue): r(red), g(green), b(blue) {} 
         Spectrum operator*(float value) const;
         Spectrum operator/(float value) const;
         Spectrum operator*(const Spectrum& rhs) const;

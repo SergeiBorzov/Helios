@@ -17,8 +17,8 @@ namespace Helios {
             auto it = scene.m_MaterialMap.find(hit_record.geometry_id);
             assert(it != scene.m_MaterialMap.end());
 
-            const Material* material = scene.m_Materials[it->second];
-            material->ProduceBSDF(hit_record);
+            const Material& material = *scene.m_Materials[it->second];
+            material.ProduceBSDF(hit_record);
 
             for (unsigned int i = 0; i < scene.m_Lights.size(); i++) {
                 Spectrum light_intensity = {0.0f, 0.0f, 0.0f};

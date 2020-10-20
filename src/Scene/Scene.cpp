@@ -151,18 +151,15 @@ namespace Helios {
                                                       aiProcess_Triangulate |
                                                       aiProcess_CalcTangentSpace 
                                                      );
-
-        std::filesystem::path path_to_scene = std::filesystem::path(path_to_file).parent_path();
-
-        Scene* helios_scene = new Scene();
-        helios_scene->Create();
-
-
-
         // Failed to load file
         if (!scene_data) {
             return nullptr;
         }
+
+        std::filesystem::path path_to_scene = std::filesystem::path(path_to_file).parent_path();
+
+        Scene* helios_scene = new Scene();
+        helios_scene->Create();        
 
         aiNode* root_node = scene_data->mRootNode;
 
@@ -222,14 +219,14 @@ namespace Helios {
                     glm::vec3 tmp = vec3(light->mColorDiffuse.r, light->mColorDiffuse.g, light->mColorDiffuse.b);
                     Spectrum intensity = { tmp.r, tmp.g, tmp.b }; // Something is wrong here, result differs from Cycles
                     vec3 dir = normalize(mat3(light_to_world)*vec3(light->mDirection.x, light->mDirection.y, light->mDirection.z));
-                    helios_scene->AddLight(new DirectionalLight(-dir, intensity));
+                    helios_scene->AddLight(std::make_shared<DirectionalLight>(-dir, intensity));
                     break;
                 }
                 case aiLightSource_POINT: {
                     glm::vec3 tmp = vec3(light->mColorDiffuse.r, light->mColorDiffuse.g, light->mColorDiffuse.b) / (4.0f * glm::pi<float>());
                     Spectrum intensity = { tmp.r, tmp.g, tmp.b };
                     vec3 position = vec3(light_to_world[3].x, light_to_world[3].y, light_to_world[3].z);
-                    helios_scene->AddLight(new PointLight(position, intensity));
+                    helios_scene->AddLight(std::make_shared<PointLight>(position, intensity));
                     break;
                 }
                 default: {
@@ -258,9 +255,9 @@ namespace Helios {
             std::shared_ptr<Texture> helios_normal_map = 
                 LoadTextureToScene(*helios_scene, path_to_scene, *scene_data, *material, aiTextureType_NORMALS);
 
-            helios_scene->AddMaterial(new Matte({diffuse.r, diffuse.g, diffuse.b}, 
-                                                helios_diffuse_texture, 
-                                                helios_normal_map));
+            helios_scene->AddMaterial(std::make_shared<Matte>(Spectrum(diffuse.r, diffuse.g, diffuse.b), 
+                                                              helios_diffuse_texture, 
+                                                              helios_normal_map));
         }
         printf("Info: Loaded %u materials\n", scene_data->mNumMaterials);
 
@@ -362,14 +359,6 @@ namespace Helios {
 
         for (auto& item: m_TriangleMeshes) {
             item.second.Release();
-        }
-
-        for (unsigned int i = 0; i < m_Lights.size(); i++) {
-            delete m_Lights[i];
-        }
-
-        for (unsigned int i = 0; i < m_Materials.size(); i++) {
-            delete m_Materials[i];
         }
     }
 }
