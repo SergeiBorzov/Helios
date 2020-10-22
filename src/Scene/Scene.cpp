@@ -223,10 +223,23 @@ namespace Helios {
                     break;
                 }
                 case aiLightSource_POINT: {
-                    glm::vec3 tmp = vec3(light->mColorDiffuse.r, light->mColorDiffuse.g, light->mColorDiffuse.b) / (4.0f * glm::pi<float>());
+                    glm::vec3 tmp = vec3(light->mColorDiffuse.r, light->mColorDiffuse.g, light->mColorDiffuse.b)/(4.0f * glm::pi<float>());
                     Spectrum intensity = { tmp.r, tmp.g, tmp.b };
                     vec3 position = vec3(light_to_world[3].x, light_to_world[3].y, light_to_world[3].z);
                     helios_scene->AddLight(std::make_shared<PointLight>(position, intensity));
+                    break;
+                }
+                case aiLightSource_SPOT: {
+                    // Note: Assimp's bug with spot light angle
+                    // light->mAngleOuterCone is always 45 degrees
+
+                    glm::vec3 tmp = vec3(light->mColorDiffuse.r, light->mColorDiffuse.g, light->mColorDiffuse.b);
+                    float cos_falloff = glm::cos(light->mAngleInnerCone);
+                    tmp = tmp/(2.0f*glm::pi<float>()*(1 - .5f * cos_falloff));
+                    Spectrum intensity = { tmp.r, tmp.g, tmp.b };
+                    vec3 dir = normalize(mat3(light_to_world)*vec3(light->mDirection.x, light->mDirection.y, light->mDirection.z));
+                    vec3 position = vec3(light_to_world[3].x, light_to_world[3].y, light_to_world[3].z);
+                    helios_scene->AddLight(std::make_shared<SpotLight>(position, -dir, light->mAngleInnerCone, intensity));
                     break;
                 }
                 default: {
