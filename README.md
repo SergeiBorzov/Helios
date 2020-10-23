@@ -28,7 +28,7 @@ Roadmap
 ### Lights
 - [x] Directional light
 - [x] Point light
-- [ ] Spot light
+- [x] Spot light
 - [ ] Area light
 - [ ] Emitters
 ### BxDFs
