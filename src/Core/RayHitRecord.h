@@ -6,6 +6,8 @@
 #include <embree3/rtcore.h>
 #include <glm/glm.hpp>
 
+#include "Types.h"
+
 namespace Helios {
 
     class BSDF;
@@ -18,9 +20,9 @@ namespace Helios {
         glm::vec3 tangent;
         glm::vec3 bitangent;
         glm::vec2 uv;
-        float distance;
-        unsigned int geometry_id;
-        unsigned int primitive_id;
+        f32 distance;
+        u32 geometry_id;
+        u32 primitive_id;
     };
 }
 

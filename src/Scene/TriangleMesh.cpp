@@ -5,7 +5,7 @@ using namespace glm;
 
 namespace Helios {
     void TriangleMesh::Create(std::vector<vec3>&& vertices_in,
-                              std::vector<unsigned int>&& indices_in, 
+                              std::vector<u32>&& indices_in, 
                               std::vector<vec3>&& normals_in,
                               std::vector<vec2>&& uvs_in,
                               std::vector<vec3>&& tangents_in) {
@@ -21,13 +21,13 @@ namespace Helios {
         memcpy(vertices, vertices_in.data(), sizeof(vec3)*vertices_in.size());
 
         // Create and buffer index buffer
-        unsigned int* indices = 
-            (unsigned int*)rtcSetNewGeometryBuffer(m_Geometry, 
+        u32* indices = 
+            (u32*)rtcSetNewGeometryBuffer(m_Geometry, 
                                                    RTC_BUFFER_TYPE_INDEX, 
                                                    0, RTC_FORMAT_UINT3, 
-                                                   3*sizeof(unsigned int), 
+                                                   3*sizeof(u32), 
                                                    indices_in.size() / 3);
-        memcpy(indices, indices_in.data(), sizeof(unsigned int)*indices_in.size());
+        memcpy(indices, indices_in.data(), sizeof(u32)*indices_in.size());
         
         /*
         if (!normals_in.empty())
@@ -35,7 +35,7 @@ namespace Helios {
         if (!uvs_in.empty())
                 attribute_count;
         */
-        unsigned int attribute_count = 0;
+        u32 attribute_count = 0;
         if (!normals_in.empty()) {
            ++attribute_count;
            m_HasNormals = true;

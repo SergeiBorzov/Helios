@@ -3,7 +3,7 @@
 #include "ColorSpaces.h"
 
 namespace Helios {
-    void convert_linear_u8_to_linear(const std::vector<unsigned char>& rgb, std::vector<float>& lrgb) {
+    void convert_linear_u8_to_linear(const std::vector<u8>& rgb, std::vector<f32>& lrgb) {
         lrgb.resize(rgb.size());
 
         for (int i = 0; i < rgb.size(); i++) {
@@ -11,7 +11,7 @@ namespace Helios {
         }
     }
 
-    void convert_srgb_to_linear(const std::vector<unsigned char>& srgb, std::vector<float>& lrgb) {
+    void convert_srgb_to_linear(const std::vector<u8>& srgb, std::vector<f32>& lrgb) {
         lrgb.resize(srgb.size());
 
         for (int i = 0; i < lrgb.size(); i++) {
@@ -28,7 +28,7 @@ namespace Helios {
         }
     }
 
-    void convert_linear_to_srgb(const std::vector<float>& lrgb, std::vector<unsigned char>& srgb) {
+    void convert_linear_to_srgb(const std::vector<f32>& lrgb, std::vector<u8>& srgb) {
         srgb.resize(lrgb.size());
 
 

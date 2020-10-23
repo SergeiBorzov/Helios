@@ -1,28 +1,30 @@
 #ifndef HELIOS_SPECTRUM_H
 #define HELIOS_SPECTRUM_H
 
+#include "Types.h"
+
 namespace Helios {
     
     // Helios uses linear sRGB color space
     struct Spectrum {
-        Spectrum(float red, float green, float blue): r(red), g(green), b(blue) {} 
-        Spectrum operator*(float value) const;
-        Spectrum operator/(float value) const;
+        Spectrum(f32 red, f32 green, f32 blue): r(red), g(green), b(blue) {} 
+        Spectrum operator*(f32 value) const;
+        Spectrum operator/(f32 value) const;
         Spectrum operator*(const Spectrum& rhs) const;
         Spectrum operator+(const Spectrum& rhs) const;
         Spectrum& operator+=(const Spectrum& rhs);
         Spectrum& operator*=(const Spectrum& rhs);
 
-        float r;
-        float g;
-        float b;
+        f32 r;
+        f32 g;
+        f32 b;
     };
 
-    inline Spectrum Spectrum::operator*(float value) const {
+    inline Spectrum Spectrum::operator*(f32 value) const {
         return { r*value, b*value, g*value };
     }
 
-    inline Spectrum Spectrum::operator/(float value) const {
+    inline Spectrum Spectrum::operator/(f32 value) const {
         return { r/value, b/value, g/value };
     }
 

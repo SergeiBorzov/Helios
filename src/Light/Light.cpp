@@ -17,8 +17,8 @@ namespace Helios {
 
     void SpotLight::SampleIntensity(const RayHitRecord& record, vec3& w_i, Spectrum& intensity) const {
         w_i = normalize(m_Position - record.hit_point);
-        float theta = dot(m_Direction, w_i);
-        if (theta > m_CosFalloff) {
+        f32 theta = dot(m_Direction, w_i);
+        if (theta > m_OuterCos) {
             intensity = m_Intensity/distance2(m_Position, record.hit_point);
         }
         else {

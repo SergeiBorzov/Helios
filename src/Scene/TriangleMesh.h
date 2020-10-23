@@ -6,11 +6,13 @@
 #include <embree3/rtcore.h>
 #include <glm/glm.hpp>
 
+#include "../Core/Types.h"
+
 namespace Helios {
     class TriangleMesh {
     public:
         void Create(std::vector<glm::vec3>&& vertices,
-                    std::vector<unsigned int>&& indices,
+                    std::vector<u32>&& indices,
                     std::vector<glm::vec3>&& normals,
                     std::vector<glm::vec2>&& uvs,
                     std::vector<glm::vec3>&& tangents);         

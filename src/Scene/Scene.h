@@ -7,6 +7,7 @@
 
 #include <embree3/rtcore.h>
 
+#include "../Core/Types.h"
 #include "../Core/RayHitRecord.h"
 #include "../Camera/Camera.h"
 #include "../Light/Light.h"
@@ -18,7 +19,7 @@ namespace Helios {
     class Scene {
     friend class Integrator;
     public:
-        static Scene* LoadFromFile(const char* path_to_file, int width, int height);
+        static Scene* LoadFromFile(const char* path_to_file, i32 width, i32 height);
 
         void Create();
         bool Intersect(const RTCRay& ray, RayHitRecord& ray_hit_record) const;
@@ -26,10 +27,15 @@ namespace Helios {
 
         inline RTCScene GetRTCScene() const { return m_Scene; }
 
-        inline void AddCamera(const Camera& camera) { m_Cameras.push_back(camera); }
+        inline void AddCamera(const std::shared_ptr<Camera>& camera) { m_Cameras.push_back(camera); }
         inline void AddLight(const std::shared_ptr<Light>& light) { m_Lights.push_back(light); }
-        inline void AddEntity(const TriangleMesh& mesh, unsigned int material_id);
-        inline void AddMaterial(const std::shared_ptr<Material>& material) { m_Materials.push_back(material); }
+        inline void AddEntity(const TriangleMesh& mesh, u32 material_id);
+        inline void AddMaterial(u32 index, const std::shared_ptr<Material>& material) {
+            if (index >= m_Materials.size()) {
+                m_Materials.resize(index + 1);
+            } 
+            m_Materials[index] = material; 
+        }
 
         inline void AddTexture(const char* name, const std::shared_ptr<Texture>& texture) { m_TextureMap.insert({name, texture}); }
         inline bool HasTexture(const char* name) const { return m_TextureMap.find(name) != m_TextureMap.end(); }
@@ -45,11 +51,11 @@ namespace Helios {
 
         ~Scene();
     private:
-        std::vector<Camera> m_Cameras;
+        std::vector<std::shared_ptr<Camera>> m_Cameras;
         std::vector<std::shared_ptr<Light>> m_Lights;
         std::vector<std::shared_ptr<Material>> m_Materials;
-        std::unordered_map<unsigned int, TriangleMesh> m_TriangleMeshes;
-        std::unordered_map<unsigned int, unsigned int> m_MaterialMap;
+        std::unordered_map<u32, TriangleMesh> m_TriangleMeshes;
+        std::unordered_map<u32, u32> m_MaterialMap;
         std::unordered_map<std::string_view, std::shared_ptr<Texture>> m_TextureMap; 
         RTCScene m_Scene;
     };

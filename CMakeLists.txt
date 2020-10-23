@@ -3,14 +3,7 @@ cmake_minimum_required(VERSION 2.8.11)
 project(Helios)
 
 find_package(Embree 3.0 REQUIRED)
-find_package(assimp 5.0 REQUIRED)
 find_package(glm CONFIG REQUIRED)
-
-# assimp cmake fix https://github.com/ros-planning/geometric_shapes/issues/23
-find_library(
-    assimp_LIBRARIES
-    NAMES assimp
-)
 
 set(CMAKE_CXX_FLAGS_DEBUG_INIT "-Wall -Wextra -g -pedantic")
 set(CMAKE_CXX_FLAGS_RELEASE_INIT "-Wall -O2")
@@ -29,5 +22,11 @@ file(GLOB Sources
 )
 
 add_executable(Helios ${Sources})
-target_include_directories(Helios PUBLIC ${EMBREE_INCLUDE_DIRS} ${ASSIMP_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/src/third_party/include)
-target_link_libraries(Helios PRIVATE glm ${assimp_LIBRARIES} ${EMBREE_LIBRARY})
+target_include_directories(Helios PUBLIC 
+    ${EMBREE_INCLUDE_DIRS} 
+    ${CMAKE_CURRENT_SOURCE_DIR}/src 
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/third_party/include/stb
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/third_party/include/tinygltf
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/third_party/include/nlohmann
+)
+target_link_libraries(Helios PRIVATE glm ${EMBREE_LIBRARY})

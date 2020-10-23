@@ -4,6 +4,8 @@
 #include <glm/glm.hpp>
 #include <embree3/rtcore.h>
 
+#include "../Core/Types.h"
+
 namespace Helios {
     // base class for all cameras
     class Camera {
@@ -16,8 +18,9 @@ namespace Helios {
         {}
 
         inline void SetView(const glm::mat4& view) { m_View = view; m_InvView = glm::inverse(view); }
-        RTCRay GenerateRay(float u, float v) const;
+        RTCRay GenerateRay(f32 u, f32 v) const;
 
+        virtual ~Camera() {}
     protected:
         glm::mat4 m_Projection;
         glm::mat4 m_InvProjection;
@@ -27,7 +30,8 @@ namespace Helios {
 
     class PerspectiveCamera: public Camera {
     public:
-        PerspectiveCamera(float fov, float aspect, float near, float far);
+        PerspectiveCamera(f32 fov, f32 aspect, f32 near, f32 far);
+        ~PerspectiveCamera() {}
     private:
         //float m_FOV;
         //float m_Aspect;

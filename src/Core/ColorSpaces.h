@@ -3,11 +3,12 @@
 
 #include <vector>
 
+#include "Types.h"
 
 namespace Helios {
-    void convert_linear_u8_to_linear(const std::vector<unsigned char>& rgb, std::vector<float>& lrgb);
-    void convert_srgb_to_linear(const std::vector<unsigned char>& srgb, std::vector<float>& lrgb);
-    void convert_linear_to_srgb(const std::vector<float>& linear, std::vector<unsigned char>& srgb);
+    void convert_linear_u8_to_linear(const std::vector<u8>& rgb, std::vector<f32>& lrgb);
+    void convert_srgb_to_linear(const std::vector<u8>& srgb, std::vector<f32>& lrgb);
+    void convert_linear_to_srgb(const std::vector<f32>& linear, std::vector<u8>& srgb);
 }
 
 

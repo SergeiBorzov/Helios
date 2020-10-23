@@ -11,7 +11,7 @@ namespace Helios {
     public:
         enum ColorSpace { Linear, sRGB };
 
-        bool LoadFromFile(const char* path_to_file, ColorSpace color_space);
+        static std::shared_ptr<Texture> LoadFromFile(const char* path_to_file, ColorSpace color_space);
 
         inline int GetWidth() const { return m_Width; }
         inline int GetHeight() const { return m_Height; }

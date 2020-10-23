@@ -20,7 +20,7 @@ namespace Helios {
             const Material& material = *scene.m_Materials[it->second];
             material.ProduceBSDF(hit_record);
 
-            for (unsigned int i = 0; i < scene.m_Lights.size(); i++) {
+            for (u32 i = 0; i < scene.m_Lights.size(); i++) {
                 Spectrum light_intensity = {0.0f, 0.0f, 0.0f};
                 vec3 w_i = vec3(0.0f);
                 scene.m_Lights[i]->SampleIntensity(hit_record, w_i, light_intensity);
@@ -48,16 +48,16 @@ namespace Helios {
         return final_color;
     }
 
-    void Integrator::Render(std::vector<float>& image_lrgb, const Scene& scene, int width, int height) {
+    void Integrator::Render(std::vector<float>& image_lrgb, const Scene& scene, i32 width, i32 height) {
         image_lrgb.resize(width*height*3);
 
         // Render image from each camera of the scene
         for (const auto& camera: scene.m_Cameras) {
-            for (int y = 0; y < height; y++) {
-                for (int x = 0; x < width; x++) {
+            for (i32 y = 0; y < height; y++) {
+                for (i32 x = 0; x < width; x++) {
                     float u = 2.0f*(static_cast<float>(x) / width) - 1.0f;
                     float v = 2.0f*((height - y)/ static_cast<float>(height)) - 1.0f;
-                    RTCRay ray = camera.GenerateRay(u, v);
+                    RTCRay ray = camera->GenerateRay(u, v);
 
                     Spectrum pixel_color = RayTracing(scene, ray);
                     image_lrgb[y*width*3 + x*3 + 0] = glm::clamp(pixel_color.r, 0.0f, 1.0f);

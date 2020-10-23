@@ -47,18 +47,18 @@ namespace Helios {
 
     class SpotLight: public Light {
     public:
-        SpotLight(const glm::vec3& position, const glm::vec3& direction, float falloff, const Spectrum& intensity):
+        SpotLight(const glm::vec3& position, const glm::vec3& direction, f32 outer_angle, const Spectrum& intensity):
             Light(intensity),
             m_Position(position),
             m_Direction(glm::normalize(direction)),
-            m_CosFalloff(glm::cos(falloff))
+            m_OuterCos(glm::cos(outer_angle))
         {}
 
         void SampleIntensity(const RayHitRecord& record, glm::vec3& w_i, Spectrum& intensity) const override;
     private:
         glm::vec3 m_Position;
         glm::vec3 m_Direction;
-        float m_CosFalloff;
+        f32 m_OuterCos;
     };
 
 }

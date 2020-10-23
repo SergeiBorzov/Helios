@@ -3,73 +3,18 @@
 #include <filesystem>
 
 #include <glm/gtc/constants.hpp>
+#include <glm/gtx/quaternion.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
-#include <assimp/Importer.hpp>
-#include <assimp/scene.h>
-#include <assimp/postprocess.h>
+#define TINYGLTF_IMPLEMENTATION
+#include "tiny_gltf.h"
 
 #include "../Core/Globals.h"
 #include "../Core/ColorSpaces.h"
 #include "Scene.h"
 
 using namespace glm;
-
-
-static std::shared_ptr<Helios::Texture> 
-LoadTextureToScene(Helios::Scene& helios_scene, const std::filesystem::path& path_to_scene,
-                   const aiScene& scene_data, const aiMaterial& material, aiTextureType texture_type) {
-    std::shared_ptr<Helios::Texture> helios_texture = nullptr; // result
-
-    aiString texture_path_ai;
-    if (material.Get(AI_MATKEY_TEXTURE(texture_type, 0), texture_path_ai) == AI_SUCCESS) {
-        // Check the cache first
-        if (helios_scene.HasTexture(texture_path_ai.C_Str())) {
-            helios_texture = helios_scene.GetTexture(texture_path_ai.C_Str());
-        } else {
-            if (auto texture = scene_data.GetEmbeddedTexture(texture_path_ai.C_Str())) {
-                    // Note: Returned pointer is not null, texture is embedded we now have texture data in 'texture'
-                    // TODO:
-                    assert(false);
-            } else {
-                // Note: Texture is not embedded, regular file work, check if it exists and read
-                std::filesystem::path texture_path = std::filesystem::path(texture_path_ai.C_Str());
-                // Create absolute path
-                if (texture_path.is_relative()) {
-                    texture_path = path_to_scene / texture_path;
-                }
-
-                helios_texture = std::make_shared<Helios::Texture>();
-
-                bool load_succesful = false;
-                switch(texture_type) {
-                    case aiTextureType_DIFFUSE: {
-                        load_succesful = helios_texture->LoadFromFile(texture_path.u8string().c_str(), 
-                                                                      Helios::Texture::ColorSpace::sRGB);
-                        break;
-                    }
-                    case aiTextureType_NORMALS: {
-                        load_succesful = helios_texture->LoadFromFile(texture_path.u8string().c_str(), 
-                                                                      Helios::Texture::ColorSpace::Linear);
-                        break;
-                    }
-                    default:
-                        break;
-                }
-
-                if (load_succesful) {
-                    helios_scene.AddTexture(texture_path_ai.C_Str(), helios_texture);
-                    printf("Info: Loaded texture %s\n", texture_path_ai.C_Str());
-                } else {
-                    // Some error during texture loading
-                    helios_texture = nullptr;
-                    fprintf(stderr, "Warning: Couldn't load texture %s\n", texture_path.u8string().c_str());
-                }
-            }
-        }
-    }   
-    return helios_texture;
-}
-
+namespace fs = std::filesystem;
 
 namespace Helios {
 
@@ -78,8 +23,8 @@ namespace Helios {
         //rtcSetSceneFlags(....);
     }
 
-    void Scene::AddEntity(const TriangleMesh& mesh, unsigned int material_id) {
-        unsigned int geometry_id = rtcAttachGeometry(m_Scene, mesh.GetRTCGeometry());
+    void Scene::AddEntity(const TriangleMesh& mesh, u32 material_id) {
+        u32 geometry_id = rtcAttachGeometry(m_Scene, mesh.GetRTCGeometry());
         m_TriangleMeshes.insert({geometry_id, mesh});
         m_MaterialMap.insert({geometry_id, material_id});
     }
@@ -122,7 +67,7 @@ namespace Helios {
             record.uv = uv;
         }
 
-        // Note: Assimp will generate tangents for us if we have uvs and normals
+        // Note: It is possible to generate tangents if uvs and normals are known
         if (hitted_geometry.HasNormals() && hitted_geometry.HasUVs()) {
             vec3 tangent;
             rtcInterpolate0(hitted_geometry.GetRTCGeometry(), rayhit.hit.primID, rayhit.hit.u, rayhit.hit.v,
@@ -145,221 +90,316 @@ namespace Helios {
         return ray.tfar < 0.0f;
     }
 
+    void LoadCamera(const tinygltf::Node& node, const dmat4& node_transform,
+                    const tinygltf::Model& model, Helios::Scene& helios_scene) {
+        if (node.camera >= 0 && node.camera < model.cameras.size()) {
+            const auto& camera = model.cameras[node.camera];
+
+            // Get View matrix
+            mat4 view = inverse(node_transform);
+            view[3] = node_transform[3];
+
+            if (camera.type == "perspective") {
+                const auto& p_cam = camera.perspective;
+                std::shared_ptr<PerspectiveCamera> helios_cam = 
+                    std::make_shared<PerspectiveCamera>(p_cam.yfov, p_cam.aspectRatio, p_cam.znear, p_cam.zfar);
+                helios_cam->SetView(view);
+                helios_scene.AddCamera(helios_cam);
+            }
+            else {
+                fprintf(stderr, "Error: Orthographic camera is not supported yet\n");
+            }
+        }
+    }
+
+    void LoadLight(const tinygltf::Node& node, const dmat4& node_transform_ws,
+                   const tinygltf::Model& model, Helios::Scene& helios_scene) {
+        const auto& light_obj = node.extensions.find("KHR_lights_punctual");
+        if (light_obj->second.IsObject()) {
+            const auto& light_value = light_obj->second.Get("light");
+            if (light_value.IsInt()) {
+                const auto& light = model.lights[light_value.GetNumberAsInt()];
+                // Note light.intensity is power in Watts
+                
+                if (light.type == "directional") {
+                    // Note: local direction is (0, 0, 1) in case of Blender
+                    vec3 dir = normalize(vec3(node_transform_ws*vec4(0.0, 0.0f, 1.0f, 0.0f)));
+                    vec3 tmp = make_vec3(light.color.data());
+                    Spectrum intensity = {tmp.x, tmp.y, tmp.z};
+                    helios_scene.AddLight(std::make_shared<DirectionalLight>(dir, intensity));
+                }
+                else if (light.type == "point") {
+                    vec3 pos = vec3(node_transform_ws[3]);
+                    vec3 tmp = make_vec3(light.color.data())*(light.intensity/(4.0f * glm::pi<f32>()));
+                    Spectrum intensity = {tmp.x, tmp.y, tmp.z};
+                    helios_scene.AddLight(std::make_shared<PointLight>(pos, intensity));
+                }
+                else if (light.type == "spot") {
+                    f32 cos_outer = cos(light.spot.outerConeAngle);
+                    vec3 pos = vec3(node_transform_ws[3]);
+                    vec3 dir = normalize(vec3(node_transform_ws*vec4(0.0, 0.0f, 1.0f, 0.0f)));
+                    vec3 tmp = make_vec3(light.color.data())*(light.intensity/(2.0f*glm::pi<f32>()*(1.0f - 0.5f * cos_outer)));
+                    Spectrum intensity = {tmp.x, tmp.y, tmp.z};
+                    helios_scene.AddLight(std::make_shared<SpotLight>(pos, dir, light.spot.outerConeAngle, intensity));
+                }
+                else {
+                    fprintf(stderr, "%s type of light is not supported\n", light.type.c_str());
+                }
+            }
+        }
+    }
+
+    static void LoadMaterial(const fs::path& path_to_scene, const tinygltf::Primitive& primitive, 
+                             const tinygltf::Model& model, Helios::Scene& helios_scene) {
+        const auto& material = model.materials[primitive.material];
+
+        // Color info                
+        const auto& pbr_info = material.pbrMetallicRoughness;
+        vec4 color = make_vec4(pbr_info.baseColorFactor.data());
+        Spectrum spectrum = {color.x, color.y, color.z};
+
+        std::shared_ptr<Helios::Texture> helios_albedo = nullptr; 
+        if (pbr_info.baseColorTexture.index >= 0 && pbr_info.baseColorTexture.index < model.textures.size()) {
+            const auto& albedo = model.images[model.textures[pbr_info.baseColorTexture.index].source];
+            
+            if (helios_scene.HasTexture(albedo.uri.c_str())) {
+                helios_albedo = helios_scene.GetTexture(albedo.uri.c_str());
+            }
+            else {
+                fs::path texture_path = std::filesystem::path(albedo.uri.c_str());
+
+                // Create absolute path
+                if (texture_path.is_relative()) {
+                    texture_path = path_to_scene / texture_path;
+                }
+                helios_albedo = Helios::Texture::LoadFromFile(texture_path.u8string().c_str(), Helios::Texture::ColorSpace::sRGB);
+                if (helios_albedo) {
+                    helios_scene.AddTexture(albedo.uri.c_str(), helios_albedo);
+                }
+                else {
+                    fprintf(stderr, "Failed to load texture %s\n", texture_path.u8string().c_str());
+                }
+            }
+        }
+
+        // Bump map
+        // if (material.normalTexture...)
+
+        std::shared_ptr<Helios::Texture> helios_bump = nullptr; 
+        if (material.normalTexture.index >= 0) {
+            const auto& bump = model.images[model.textures[material.normalTexture.index].source];
+            
+            if (helios_scene.HasTexture(bump.uri.c_str())) {
+                helios_bump = helios_scene.GetTexture(bump.uri.c_str());
+            }
+            else {
+                fs::path texture_path = std::filesystem::path(bump.uri.c_str());
+
+                // Create absolute path
+                if (texture_path.is_relative()) {
+                    texture_path = path_to_scene / texture_path;
+                }
+                helios_bump = Helios::Texture::LoadFromFile(texture_path.u8string().c_str(), Helios::Texture::ColorSpace::Linear);
+                if (helios_bump) {
+                    helios_scene.AddTexture(bump.uri.c_str(), helios_bump);
+                }
+                else {
+                    fprintf(stderr, "Failed to load texture %s\n", texture_path.u8string().c_str());
+                }
+            }
+        }
+        helios_scene.AddMaterial(primitive.material, 
+                                 std::make_shared<Matte>(spectrum, helios_albedo, helios_bump));
+    }
+
+    static void LoadMesh(const fs::path& path_to_scene,
+                         const tinygltf::Node& node, const dmat4& node_transform_ws, 
+                         const tinygltf::Model& model, Helios::Scene& helios_scene) {
+        if (node.mesh >= 0 && node.mesh < model.meshes.size()) {        
+            const auto& mesh = model.meshes[node.mesh];
+
+            std::vector<vec3> vertices;
+            std::vector<vec3> normals;
+            std::vector<vec3> tangents;
+            std::vector<vec2> uvs;
+            std::vector<u32> indices;
+           
+            for (const auto& primitive: mesh.primitives) {
+                LoadMaterial(path_to_scene, primitive, model, helios_scene);
+
+                for (auto &attrib : primitive.attributes) {
+                    const auto& accessor = model.accessors[attrib.second];
+                    const auto& buffer_view = model.bufferViews[accessor.bufferView];
+                    const auto& buffer = model.buffers[buffer_view.buffer];
+
+                    int byte_stride = accessor.ByteStride(model.bufferViews[accessor.bufferView]);
+                    int byte_offset = buffer_view.byteOffset;
+                    int byte_length = buffer_view.byteLength;
+
+                    if (attrib.first == "POSITION") {
+                        const vec3* start = (const vec3*)(&buffer.data.at(0) + byte_offset);
+                        vertices = std::vector<vec3>(start, start + byte_length/sizeof(vec3));
+
+                        for (auto& vertex: vertices) {
+                            vertex = vec3(node_transform_ws*vec4(vertex, 1.0f));
+                        }
+                    }
+                    else if (attrib.first == "NORMAL") {
+                        const vec3* start = (const vec3*)(&buffer.data.at(0) + byte_offset);
+                        normals = std::vector<vec3>(start, start + byte_length/sizeof(vec3));
+
+                        for (auto& normal: normals) {
+                            normal = normalize(vec3(node_transform_ws*vec4(normal, 0.0f)));
+                        }
+                    }
+                    else if (attrib.first == "TANGENT") {
+                        const vec3* start = (const vec3*)(&buffer.data.at(0) + byte_offset);
+                        tangents = std::vector<vec3>(start, start + byte_length/sizeof(vec3));
+
+                        for (auto& tangent: tangents) {
+                            tangent = normalize(vec3(node_transform_ws*vec4(tangent, 0.0f)));
+                        }
+                    }
+                    else if (attrib.first == "TEXCOORD_0") {
+                        const vec2* start = (const vec2*)(&buffer.data.at(0) + byte_offset);
+                        uvs = std::vector<vec2>(start, start + byte_length/sizeof(vec2));
+
+                        //for (auto& uv: uvs) {
+                            //uv = scale*uv;
+                        //}
+                    }
+                }
+
+                // Indices
+                if (primitive.mode != TINYGLTF_MODE_TRIANGLES) {
+                    fprintf(stderr, "Warning: %s not loaded. Helios doesn't support non-triangle meshes yet\n", mesh.name.c_str());
+                    return;
+                }
+                const auto& accessor = model.accessors[primitive.indices];
+                const auto& buffer_view = model.bufferViews[primitive.indices];
+                const auto& buffer = model.buffers[buffer_view.buffer];
+
+                int byte_stride = accessor.ByteStride(model.bufferViews[accessor.bufferView]);
+                int byte_offset = buffer_view.byteOffset;
+                int byte_length = buffer_view.byteLength;
+
+                indices.resize(accessor.count);
+                switch(accessor.componentType) {
+                    case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE: {
+                        const u8* start = (const u8*)(&buffer.data.at(0) + byte_offset);
+                        std::vector<u8> tmp(start, start + byte_length/sizeof(u8));
+                        for (u32 i = 0; i < indices.size(); i++) {
+                            indices[i] = tmp[i];
+                        }
+                        break;
+                    }
+                    case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT: {
+                        const u16* start = (const u16*)(&buffer.data.at(0) + byte_offset);
+                        std::vector<u16> tmp(start, start + byte_length/sizeof(u16));
+                        for (u32 i = 0; i < indices.size(); i++) {
+                            indices[i] = tmp[i];
+                        }
+                        break;
+                    }
+                    case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT: {
+                        const u32* start = (const u32*)(&buffer.data.at(0) + byte_offset);
+                        indices = std::vector<u32>(start, start + byte_length/sizeof(u32));
+                        break;
+                    }
+                    default: {
+                        assert(false);
+                    }
+                }                 
+
+                TriangleMesh helios_mesh;
+                helios_mesh.Create(std::move(vertices), std::move(indices), 
+                                   std::move(normals), std::move(uvs),
+                                   std::move(tangents));
+
+                helios_scene.AddEntity(helios_mesh, primitive.material);
+            }
+        }
+    }
+
+    static void LoadNode(const fs::path& path_to_scene, const tinygltf::Node& node,
+                         const dmat4& node_transform_ws, const tinygltf::Model& model, 
+                         Helios::Scene& helios_scene) {
+        LoadCamera(node, node_transform_ws, model, helios_scene);
+        LoadLight(node, node_transform_ws, model, helios_scene);
+        LoadMesh(path_to_scene, node, node_transform_ws, model, helios_scene);
+        printf("Info: Node %s loaded\n", node.name.c_str());
+    }
+
+    static void LoadScene(const fs::path& path_to_scene, const tinygltf::Scene& scene, const tinygltf::Model& model, Helios::Scene& helios_scene) {
+        // Start with root nodes
+        printf("Info: Loading scene...\n");
+        for (u32 i = 0; i < scene.nodes.size(); i++) {
+            dmat4 node_transform_ws = dmat4(1.0);
+            const auto& node = model.nodes[scene.nodes[i]];
+
+            if (node.scale.size() == 3) {
+                node_transform_ws = scale(dmat4(1.0), make_vec3(node.scale.data()));
+            }
+            if (node.rotation.size() == 4) {
+                node_transform_ws = toMat4(make_quat(node.rotation.data()))*node_transform_ws;
+            }
+            if (node.translation.size() == 3) {
+                node_transform_ws = translate(dmat4(1.0f), make_vec3(node.translation.data()))*node_transform_ws;
+            }
+
+            LoadNode(path_to_scene, node, node_transform_ws, model, helios_scene);
+
+            for (u32 j = 0; j < node.children.size(); j++) {
+                const auto& child = model.nodes[node.children[j]];
+
+                dmat4 child_transform_ws = dmat4(1.0);
+                if (child.scale.size() == 3) {
+                    child_transform_ws = scale(dmat4(1.0), make_vec3(child.scale.data()));
+                }
+                if (child.rotation.size() == 4) {
+                    child_transform_ws = toMat4(make_quat(child.rotation.data()))*child_transform_ws;
+                }
+                if (child.translation.size() == 3) {
+                    child_transform_ws = translate(dmat4(1.0f), make_vec3(child.translation.data()))*child_transform_ws;
+                }
+                child_transform_ws = node_transform_ws*child_transform_ws;
+
+                LoadNode(path_to_scene, child, child_transform_ws, model, helios_scene);
+            }
+        }
+        printf("Info: Scene Loaded\n");
+    }
+
     Scene* Scene::LoadFromFile(const char* path_to_file, int width, int height) {
-        Assimp::Importer importer;
-        const aiScene *scene_data = importer.ReadFile(path_to_file, 
-                                                      aiProcess_Triangulate |
-                                                      aiProcess_CalcTangentSpace 
-                                                     );
-        // Failed to load file
-        if (!scene_data) {
+        tinygltf::TinyGLTF importer;
+        tinygltf::Model model;
+
+        std::string err;
+        std::string warn;
+
+        bool success = importer.LoadASCIIFromFile(&model, &err, &warn, path_to_file);
+        if (!warn.empty()) {
+            printf("%s\n", warn.c_str());
+        }
+        if (!err.empty()) {
+            printf("%s\n", err.c_str());
+        }
+        if (!success) {
             return nullptr;
         }
 
-        std::filesystem::path path_to_scene = std::filesystem::path(path_to_file).parent_path();
+        // Store path to scene file
+        fs::path path_to_scene = std::filesystem::path(path_to_file).parent_path();
 
+        // Check if we have a valid scene
+        if (model.defaultScene == -1) {
+            return nullptr;
+        }
+
+        const auto& scene = model.scenes[model.defaultScene];
         Scene* helios_scene = new Scene();
-        helios_scene->Create();        
-
-        aiNode* root_node = scene_data->mRootNode;
-
-        // 1) Load cameras
-        for (unsigned int i = 0; i < scene_data->mNumCameras; i++) {
-            auto& camera = scene_data->mCameras[i];
-            aiNode* camera_node = root_node->FindNode(camera->mName);
-            assert(camera_node);
-
-            // Apply all parent transforms, we need world coordinates
-            aiMatrix4x4 cam_to_world_ai;
-            while (camera_node != root_node) {
-                cam_to_world_ai = camera_node->mTransformation*cam_to_world_ai;
-                camera_node = camera_node->mParent;
-            }
-
-            mat4 cam_to_world;
-            cam_to_world[0] = vec4(cam_to_world_ai.a1, cam_to_world_ai.b1, cam_to_world_ai.c1, cam_to_world_ai.d1);
-            cam_to_world[1] = vec4(cam_to_world_ai.a2, cam_to_world_ai.b2, cam_to_world_ai.c2, cam_to_world_ai.d2);
-            cam_to_world[2] = vec4(cam_to_world_ai.a3, cam_to_world_ai.b3, cam_to_world_ai.c3, cam_to_world_ai.d3);
-            cam_to_world[3] = vec4(cam_to_world_ai.a4, cam_to_world_ai.b4, cam_to_world_ai.c4, cam_to_world_ai.d4);
-
-            mat4 view = inverse(cam_to_world);
-            view[3] = cam_to_world[3];
-            
-            float aspect = static_cast<float>(width)/height;
-            PerspectiveCamera helios_cam(atan(tan(camera->mHorizontalFOV)/aspect), 
-                                         aspect, 
-                                         camera->mClipPlaneNear, 
-                                         camera->mClipPlaneFar);
-            helios_cam.SetView(view);
-            helios_scene->AddCamera(helios_cam);
-        }
-        printf("Info: Loaded %u cameras\n", scene_data->mNumCameras);
-
-        // 2) Load lights
-        for (unsigned int i = 0; i < scene_data->mNumLights; i++) {
-            auto& light = scene_data->mLights[i];
-            aiNode* light_node = root_node->FindNode(light->mName);
-            assert(light_node);
-
-            aiMatrix4x4 light_to_world_ai;
-            while (light_node != root_node) {
-                light_to_world_ai = light_node->mTransformation*light_to_world_ai;
-                light_node = light_node->mParent;
-            }
-
-            mat4 light_to_world;
-            light_to_world[0] = vec4(light_to_world_ai.a1, light_to_world_ai.b1, light_to_world_ai.c1, 0.0f);
-            light_to_world[1] = vec4(light_to_world_ai.a2, light_to_world_ai.b2, light_to_world_ai.c2, 0.0f);
-            light_to_world[2] = vec4(light_to_world_ai.a3, light_to_world_ai.b3, light_to_world_ai.c3, 0.0f);
-            light_to_world[3] = vec4(light_to_world_ai.a4, light_to_world_ai.b4, light_to_world_ai.c4, 1.0f);
-
-            
-            switch(light->mType) {
-                case aiLightSource_DIRECTIONAL: {
-                    glm::vec3 tmp = vec3(light->mColorDiffuse.r, light->mColorDiffuse.g, light->mColorDiffuse.b);
-                    Spectrum intensity = { tmp.r, tmp.g, tmp.b }; // Something is wrong here, result differs from Cycles
-                    vec3 dir = normalize(mat3(light_to_world)*vec3(light->mDirection.x, light->mDirection.y, light->mDirection.z));
-                    helios_scene->AddLight(std::make_shared<DirectionalLight>(-dir, intensity));
-                    break;
-                }
-                case aiLightSource_POINT: {
-                    glm::vec3 tmp = vec3(light->mColorDiffuse.r, light->mColorDiffuse.g, light->mColorDiffuse.b)/(4.0f * glm::pi<float>());
-                    Spectrum intensity = { tmp.r, tmp.g, tmp.b };
-                    vec3 position = vec3(light_to_world[3].x, light_to_world[3].y, light_to_world[3].z);
-                    helios_scene->AddLight(std::make_shared<PointLight>(position, intensity));
-                    break;
-                }
-                case aiLightSource_SPOT: {
-                    // Note: Assimp's bug with spot light angle
-                    // light->mAngleOuterCone is always 45 degrees
-
-                    glm::vec3 tmp = vec3(light->mColorDiffuse.r, light->mColorDiffuse.g, light->mColorDiffuse.b);
-                    float cos_falloff = glm::cos(light->mAngleInnerCone);
-                    tmp = tmp/(2.0f*glm::pi<float>()*(1 - .5f * cos_falloff));
-                    Spectrum intensity = { tmp.r, tmp.g, tmp.b };
-                    vec3 dir = normalize(mat3(light_to_world)*vec3(light->mDirection.x, light->mDirection.y, light->mDirection.z));
-                    vec3 position = vec3(light_to_world[3].x, light_to_world[3].y, light_to_world[3].z);
-                    helios_scene->AddLight(std::make_shared<SpotLight>(position, -dir, light->mAngleInnerCone, intensity));
-                    break;
-                }
-                default: {
-                    fprintf(stderr, "Warning: Light '%s' was found but it's type is not supported by Helios\n", light->mName.C_Str());
-                    break;
-                }
-            }
-        }
-        printf("Info: Loaded %u lights\n", scene_data->mNumLights);
-
-
-        // 3) Load materials
-        for (unsigned int i = 0; i < scene_data->mNumMaterials; i++) {
-            // Load materials
-            auto& material = scene_data->mMaterials[i];
-
-            // Get diffuse color:
-            aiColor4D diffuse (1.0f, 1.0f, 1.0f, 1.0f);
-            aiGetMaterialColor(material, AI_MATKEY_COLOR_DIFFUSE, &diffuse);
-
-            // Get diffuse texture:
-            std::shared_ptr<Texture> helios_diffuse_texture = 
-                LoadTextureToScene(*helios_scene, path_to_scene, *scene_data, *material, aiTextureType_DIFFUSE);
-            
-            // Get normal texture:
-            std::shared_ptr<Texture> helios_normal_map = 
-                LoadTextureToScene(*helios_scene, path_to_scene, *scene_data, *material, aiTextureType_NORMALS);
-
-            helios_scene->AddMaterial(std::make_shared<Matte>(Spectrum(diffuse.r, diffuse.g, diffuse.b), 
-                                                              helios_diffuse_texture, 
-                                                              helios_normal_map));
-        }
-        printf("Info: Loaded %u materials\n", scene_data->mNumMaterials);
-
-
-        // 4) Load geometry
-        for (unsigned int i = 0; i < scene_data->mNumMeshes; i++) {
-            const auto& mesh = scene_data->mMeshes[i];
-            aiNode* mesh_node = root_node->FindNode(mesh->mName);
-
-            if (!mesh_node){
-                printf("%s wasn't found\n", mesh->mName.C_Str());
-                continue;
-            }
-
-            // Apply all parent transforms, we need world coordinates
-            aiMatrix4x4 local_to_world_ai;
-            while (mesh_node != root_node) {
-                local_to_world_ai = mesh_node->mTransformation*local_to_world_ai;
-                mesh_node = mesh_node->mParent;
-            }
-
-            mat4 local_to_world;
-            local_to_world[0] = vec4(local_to_world_ai.a1, local_to_world_ai.b1, local_to_world_ai.c1, local_to_world_ai.d1);
-            local_to_world[1] = vec4(local_to_world_ai.a2, local_to_world_ai.b2, local_to_world_ai.c2, local_to_world_ai.d2);
-            local_to_world[2] = vec4(local_to_world_ai.a3, local_to_world_ai.b3, local_to_world_ai.c3, local_to_world_ai.d3);
-            local_to_world[3] = vec4(local_to_world_ai.a4, local_to_world_ai.b4, local_to_world_ai.c4, local_to_world_ai.d4);
-
-            // Create vertex buffer
-            std::vector<vec3> vertices;
-            vertices.resize(mesh->mNumVertices);
-            // TODO: Instead of multiplying every vertex just set transform in embree
-            for (unsigned int i = 0; i < mesh->mNumVertices; i++) {
-                auto& vertex = mesh->mVertices[i];
-                vertices[i] = vec3(local_to_world*vec4(vertex.x, vertex.y, vertex.z, 1.0f));
-            }
-
-            // Create index buffer
-            std::vector<unsigned int> indices;
-            indices.resize(mesh->mNumFaces*3);
-            for (unsigned int i = 0; i < mesh->mNumFaces; i++) {
-                const auto& face = mesh->mFaces[i];
-                assert(face.mNumIndices == 3);
-                indices[3*i + 0] = face.mIndices[0];
-                indices[3*i + 1] = face.mIndices[1];
-                indices[3*i + 2] = face.mIndices[2];
-            }
-
-            // Create normal buffer
-            std::vector<vec3> normals;
-            if (mesh->HasNormals()) {
-                normals.resize(mesh->mNumVertices);
-                for (unsigned int i = 0; i < mesh->mNumVertices; i++) {
-                    auto& normal = mesh->mNormals[i];
-                    normals[i] = normalize((local_to_world*vec4(normal.x, normal.y, normal.z, 0.0f)));
-                }
-            }
-
-            // Create uvs buffer
-            std::vector<vec2> uvs;
-            if (mesh->HasTextureCoords(0)) {
-                // For now load only one set of basic texture coordinates
-                assert(mesh->mNumUVComponents[0] == 2);
-                uvs.resize(mesh->mNumVertices);
-                for (unsigned int i = 0; i < mesh->mNumVertices; i++) {
-                    auto& uv = mesh->mTextureCoords[0][i];
-                    uvs[i] = vec2(uv.x, uv.y);
-                }
-            }
-
-            // Create tangent buffer
-            std::vector<vec3> tangents;
-            if (mesh->HasTangentsAndBitangents()) {
-                tangents.resize(mesh->mNumVertices);
-                for (unsigned int i = 0; i < mesh->mNumVertices; i++) {
-                    auto& tangent = mesh->mTangents[i];
-                    tangents[i] = vec3(tangent.x, tangent.y, tangent.z);
-                }
-            }
-           
-            // Add entity
-            TriangleMesh helios_mesh;
-            helios_mesh.Create(std::move(vertices), std::move(indices), 
-                               std::move(normals), std::move(uvs),
-                               std::move(tangents));
-
-            helios_scene->AddEntity(helios_mesh, mesh->mMaterialIndex);
-        }
-        printf("Info: Loaded %u meshes\n", scene_data->mNumMeshes);
-
+        helios_scene->Create();
+        LoadScene(path_to_scene, scene, model, *helios_scene);
 
         rtcCommitScene(helios_scene->GetRTCScene());
         return helios_scene;

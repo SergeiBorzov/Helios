@@ -5,14 +5,11 @@
 
 #include "Camera.h"
 
-using glm::vec3;
-using glm::vec4;
-using glm::mat4;
-using glm::normalize;
+using namespace glm;
 
 namespace Helios {
 
-    RTCRay Camera::GenerateRay(float u, float v) const {
+    RTCRay Camera::GenerateRay(f32 u, f32 v) const {
         vec4 pixel_pos = m_InvProjection*vec4(u, v, 0.0f, 1.0f);
 
         vec3 origin = vec3(m_View[3]);
@@ -27,14 +24,14 @@ namespace Helios {
         ray.dir_x = direction.x;
         ray.dir_y = direction.y;
         ray.dir_z = direction.z;
-        ray.tfar = std::numeric_limits<float>::infinity();
+        ray.tfar = std::numeric_limits<f32>::infinity();
         ray.mask = -1;
         ray.flags = 0;
         
         return ray;
     }
 
-    PerspectiveCamera::PerspectiveCamera(float fov, float aspect, float near, float far):
+    PerspectiveCamera::PerspectiveCamera(f32 fov, f32 aspect, f32 near, f32 far):
         Camera(glm::perspective(fov, aspect, near, far))
     {}
 
