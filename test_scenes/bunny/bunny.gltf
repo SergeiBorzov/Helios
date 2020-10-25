@@ -40,7 +40,7 @@
                     ],
                     "intensity" : 3000,
                     "spot" : {
-                        "innerConeAngle" : 0.513126790523529,
+                        "innerConeAngle" : 0.12828169763088226,
                         "outerConeAngle" : 0.513126790523529
                     },
                     "type" : "spot",

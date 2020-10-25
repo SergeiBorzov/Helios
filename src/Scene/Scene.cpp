@@ -136,11 +136,12 @@ namespace Helios {
                 }
                 else if (light.type == "spot") {
                     f32 cos_outer = cos(light.spot.outerConeAngle);
+                    f32 cos_inner = cos(light.spot.innerConeAngle);
                     vec3 pos = vec3(node_transform_ws[3]);
                     vec3 dir = normalize(vec3(node_transform_ws*vec4(0.0, 0.0f, 1.0f, 0.0f)));
-                    vec3 tmp = make_vec3(light.color.data())*(light.intensity/(2.0f*glm::pi<f32>()*(1.0f - 0.5f * cos_outer)));
+                    vec3 tmp = make_vec3(light.color.data())*(light.intensity/(2.0f*glm::pi<f32>()*(1.0f - 0.5f * (cos_inner + cos_outer))));
                     Spectrum intensity = {tmp.x, tmp.y, tmp.z};
-                    helios_scene.AddLight(std::make_shared<SpotLight>(pos, dir, light.spot.outerConeAngle, intensity));
+                    helios_scene.AddLight(std::make_shared<SpotLight>(pos, dir, light.spot.outerConeAngle, light.spot.innerConeAngle, intensity));
                 }
                 else {
                     fprintf(stderr, "%s type of light is not supported\n", light.type.c_str());
