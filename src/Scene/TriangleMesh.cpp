@@ -28,13 +28,7 @@ namespace Helios {
                                                    3*sizeof(u32), 
                                                    indices_in.size() / 3);
         memcpy(indices, indices_in.data(), sizeof(u32)*indices_in.size());
-        
-        /*
-        if (!normals_in.empty())
-            attribute_count++;
-        if (!uvs_in.empty())
-                attribute_count;
-        */
+       
         u32 attribute_count = 0;
         if (!normals_in.empty()) {
            ++attribute_count;
@@ -49,8 +43,64 @@ namespace Helios {
         if (!tangents_in.empty()) {
             ++attribute_count;
         }
+        else if (m_HasNormals && m_HasUVs) {
+            // Note: if we have normals and uvs we can generate tangent for each vertex
+            // Note: gltf 2.0 specification guarantees that triangle front-face has CCW order
+            ++attribute_count;
+
+            tangents_in = std::vector<vec3>(vertices_in.size(), vec3(0.0f));
+
+            vec3* tangents = new vec3[vertices_in.size()*2];
+            vec3* bitangents = tangents + vertices_in.size();
+
+            // Calculating tangent for each triangle
+            for (u32 i = 0; i < indices_in.size(); i += 3) {
+                const vec3& p0 = vertices_in[indices_in[i + 0]];
+                const vec3& p1 = vertices_in[indices_in[i + 1]];
+                const vec3& p2 = vertices_in[indices_in[i + 2]];
+
+                const vec2& uv0 = uvs_in[indices_in[i + 0]];
+                const vec2& uv1 = uvs_in[indices_in[i + 1]];
+                const vec2& uv2 = uvs_in[indices_in[i + 2]];
+
+                // Finding tangent using following:
+                // p_i - p_j = (u_i - u_j)*t + (v_i - v_j)*b
+
+                vec2 xy1 = uv1 - uv0;
+                vec2 xy2 = uv2 - uv0;
+                float d = 1 / (xy1.x*xy2.y - xy2.x*xy1.y);
+
+                mat2x3 e(p1 - p0, p2 - p0);
+                mat2x2 xy(vec2(xy2.y, -xy1.y), vec2(xy2.x, -xy1.x));
+
+                mat2x3 tb = d*e*xy;
+
+                tangents[indices_in[i + 0]] += tb[0];
+                tangents[indices_in[i + 1]] += tb[0];
+                tangents[indices_in[i + 2]] += tb[0];
+                bitangents[indices_in[i + 0]] += tb[1];
+                bitangents[indices_in[i + 1]] += tb[1];
+                bitangents[indices_in[i + 2]] += tb[1];
+            }
+
+
+            // Compute tangent and bitangent for each vertex using orhonormalization
+            for (u32 i = 0; i < vertices_in.size(); i++) {
+                const vec3& t = tangents[i];
+                const vec3& b = bitangents[i];
+                const vec3& n = normals_in[i];
+
+                tangents_in[i] = normalize(t - dot(t, n)*n);
+                if (dot(cross(t, b), n) < 0.0f) {
+                    tangents_in[i] *= -1.0f;
+                }
+            }
+
+            delete[] tangents;
+        }
 
         rtcSetGeometryVertexAttributeCount(m_Geometry, attribute_count);
+
         // Create and buffer normals
         if (!normals_in.empty()) {
             vec3* normals = 

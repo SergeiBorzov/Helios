@@ -183,9 +183,6 @@ namespace Helios {
             }
         }
 
-        // Bump map
-        // if (material.normalTexture...)
-
         std::shared_ptr<Helios::Texture> helios_bump = nullptr; 
         if (material.normalTexture.index >= 0) {
             const auto& bump = model.images[model.textures[material.normalTexture.index].source];
@@ -264,10 +261,6 @@ namespace Helios {
                     else if (attrib.first == "TEXCOORD_0") {
                         const vec2* start = (const vec2*)(&buffer.data.at(0) + byte_offset);
                         uvs = std::vector<vec2>(start, start + byte_length/sizeof(vec2));
-
-                        //for (auto& uv: uvs) {
-                            //uv = scale*uv;
-                        //}
                     }
                 }
 
@@ -276,6 +269,7 @@ namespace Helios {
                     fprintf(stderr, "Warning: %s not loaded. Helios doesn't support non-triangle meshes yet\n", mesh.name.c_str());
                     return;
                 }
+                
                 const auto& accessor = model.accessors[primitive.indices];
                 const auto& buffer_view = model.bufferViews[primitive.indices];
                 const auto& buffer = model.buffers[buffer_view.buffer];
