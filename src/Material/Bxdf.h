@@ -24,6 +24,14 @@ namespace Helios {
         Spectrum m_Reflectance;
     };
 
+    class SpecularBRDF: public BxDF {
+    public:
+        SpecularBRDF(const Spectrum& reflectance): m_Reflectance(reflectance) {}
+        Spectrum Evaluate(const glm::vec3& w_o, const glm::vec3& w_i) override;
+    private:
+        Spectrum m_Reflectance;
+    };
+
     class BSDF {
     public:
         // Note: w_o and w_i are in world space

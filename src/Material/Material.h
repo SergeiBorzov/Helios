@@ -24,12 +24,29 @@ namespace Helios {
             m_DiffuseTexture(diffuse_texture),
             m_NormalMap(normal_map) 
         {}
-        void ProduceBSDF(RayHitRecord& record) const;
+        void ProduceBSDF(RayHitRecord& record) const override;
         ~Matte() {}
     private:
         Spectrum m_Diffuse;
         std::shared_ptr<Texture> m_DiffuseTexture = nullptr;
         std::shared_ptr<Texture> m_NormalMap = nullptr;   
+    };
+
+    class Mirror: public Material {
+    public:
+        Mirror(const Spectrum& specular,
+               const std::shared_ptr<Texture>& specular_texture = nullptr,
+               const std::shared_ptr<Texture>& normal_map = nullptr):
+            m_Specular(specular),
+            m_SpecularTexture(specular_texture),
+            m_NormalMap(normal_map)
+        {}
+        void ProduceBSDF(RayHitRecord& record) const override;
+        ~Mirror() {}
+    private:
+        Spectrum m_Specular;
+        std::shared_ptr<Texture> m_SpecularTexture = nullptr;
+        std::shared_ptr<Texture> m_NormalMap = nullptr;
     };
 }
 

@@ -67,17 +67,26 @@ namespace Helios {
             record.uv = uv;
         }
 
-        // Note: It is possible to generate tangents if uvs and normals are known
         if (hitted_geometry.HasNormals() && hitted_geometry.HasUVs()) {
+            // Note: If we have normals and uvs, tangents were generated automatically
             vec3 tangent;
             rtcInterpolate0(hitted_geometry.GetRTCGeometry(), rayhit.hit.primID, rayhit.hit.u, rayhit.hit.v,
                             RTC_BUFFER_TYPE_VERTEX_ATTRIBUTE, 2, &tangent.x, 3);
             record.tangent = normalize(tangent);
         }
+        else {
+            // Otherwise use face normal, tangent
+            if (abs(record.shading_normal.x) > abs(record.shading_normal.y)) {
+                record.tangent = normalize(vec3(-record.shading_normal.z, 0.0f, record.shading_normal.x));
+            }                
+            else {
+                record.tangent = normalize(vec3(0, record.shading_normal.z, -record.shading_normal.y));
+            }
+        }
        
         record.hit_point = vec3(ray.org_x, ray.org_y, ray.org_z) + 
                            normalize(vec3(ray.dir_x, ray.dir_y, ray.dir_z))*record.distance +
-                           record.normal*0.01f;
+                           record.shading_normal*0.01f;
         return true;
     }
 
@@ -269,7 +278,7 @@ namespace Helios {
                     fprintf(stderr, "Warning: %s not loaded. Helios doesn't support non-triangle meshes yet\n", mesh.name.c_str());
                     return;
                 }
-                
+
                 const auto& accessor = model.accessors[primitive.indices];
                 const auto& buffer_view = model.bufferViews[primitive.indices];
                 const auto& buffer = model.buffers[buffer_view.buffer];
@@ -374,10 +383,10 @@ namespace Helios {
 
         bool success = importer.LoadASCIIFromFile(&model, &err, &warn, path_to_file);
         if (!warn.empty()) {
-            printf("%s\n", warn.c_str());
+            fprintf(stderr, "%s\n", warn.c_str());
         }
         if (!err.empty()) {
-            printf("%s\n", err.c_str());
+            fprintf(stderr, "%s\n", err.c_str());
         }
         if (!success) {
             return nullptr;
